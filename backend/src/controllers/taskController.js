@@ -2,10 +2,11 @@ const prisma = require('../utils/db');
 const { createNotification } = require('../services/notification');
 const { logActivity } = require('../utils/activityLogger');
 const { sendTaskAssignmentEmail, sendTaskStatusUpdateEmail, sendTeamTaskAssignmentEmail } = require('../services/email');
+const { syncProjectLifecycleChatRoom } = require('../services/projectChatService');
 
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, deadline, assigneeId, type, storyPoints, sprintName, assignType, teamId } = req.body;
+    const { title, description, priority, deadline, assigneeId, type, storyPoints, sprintName, assignType, teamId, projectId, estimatedHours } = req.body;
     let filePaths = [];
 
     if (req.files) {
@@ -40,11 +41,11 @@ const createTask = async (req, res) => {
       }
 
       let targetAssignees = team.members.filter(m => m.user && (m.user.role === 'INTERN' || m.user.role === 'EMPLOYEE'));
-      
+
       if (targetAssignees.length === 0 && team.members.length > 0) {
         targetAssignees = team.members.filter(m => m.user);
       }
-      
+
       if (targetAssignees.length === 0 && team.leaderId) {
         targetAssignees = [{ userId: team.leaderId, user: team.leader }];
       }
@@ -69,7 +70,8 @@ const createTask = async (req, res) => {
             status: 'PENDING',
             type: type || 'TASK',
             storyPoints: storyPoints ? parseInt(storyPoints, 10) : 0,
-            sprintName: sprintName || null
+            sprintName: sprintName || null,
+            projectId: projectId || null
           },
           include: {
             assignee: { select: { id: true, name: true, email: true } },
@@ -94,6 +96,9 @@ const createTask = async (req, res) => {
         });
 
         tasksCreated.push(t);
+        if (projectId) {
+          await syncProjectLifecycleChatRoom(projectId);
+        }
       }
 
       await sendTeamTaskAssignmentEmail(team, { title, priority, deadline }, req.user, team.leader, team.members);
@@ -133,6 +138,21 @@ const createTask = async (req, res) => {
       }
     }
 
+    if (projectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: { members: { select: { userId: true } } }
+      });
+      if (project) {
+        const isProjectMember = project.members.some(m => m.userId === assigneeId) ||
+          project.leaderId === assigneeId ||
+          project.creatorId === assigneeId;
+        if (!isProjectMember) {
+          return res.status(400).json({ message: 'Task assignee must be a member of the selected project.' });
+        }
+      }
+    }
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -142,15 +162,18 @@ const createTask = async (req, res) => {
         assigneeId,
         creatorId: req.user.id,
         teamId: assigneeTeam ? assigneeTeam.teamId : null,
+        projectId: projectId || null,
         attachments: filePaths,
         status: 'PENDING',
         type: type || 'TASK',
         storyPoints: storyPoints ? parseInt(storyPoints, 10) : 0,
-        sprintName: sprintName || null
+        sprintName: sprintName || null,
+        estimatedHours: parseFloat(estimatedHours) || 0
       },
       include: {
         assignee: { select: { id: true, name: true, email: true } },
-        creator: { select: { id: true, name: true, role: true } }
+        creator: { select: { id: true, name: true, role: true } },
+        project: { select: { id: true, projectCode: true, name: true } }
       }
     });
 
@@ -183,6 +206,10 @@ const createTask = async (req, res) => {
       details: `Created task "${title}" assigned to user ID: ${assigneeId}`
     });
 
+    if (projectId) {
+      await syncProjectLifecycleChatRoom(projectId);
+    }
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -214,7 +241,7 @@ const getTasks = async (req, res) => {
         where: { leaderId: req.user.id }
       });
       const teamIds = teams.map((t) => t.id);
-      
+
       where.OR = [
         { teamId: { in: teamIds } },
         { creatorId: req.user.id }
@@ -280,6 +307,27 @@ const updateTaskStatus = async (req, res) => {
       return res.status(404).json({ message: 'Task not found.' });
     }
 
+    // Dependency Validation: Block moving to IN_PROGRESS, APPROVED, or COMPLETED if prerequisites are incomplete
+    if (['IN_PROGRESS', 'APPROVED', 'COMPLETED'].includes(status)) {
+      const incompletePrerequisites = await prisma.taskDependency.findMany({
+        where: { taskId: id },
+        include: {
+          dependsOnTask: { select: { id: true, title: true, status: true } }
+        }
+      });
+
+      const unfinished = incompletePrerequisites.filter(
+        p => p.dependsOnTask.status !== 'APPROVED' && p.dependsOnTask.status !== 'COMPLETED'
+      );
+
+      if (unfinished.length > 0) {
+        const titles = unfinished.map(u => u.dependsOnTask.title).join(', ');
+        return res.status(400).json({
+          message: `This task depends on unfinished tasks: ${titles}`
+        });
+      }
+    }
+
     // Validate state transition by role
     if (req.user.role === 'INTERN' || req.user.role === 'EMPLOYEE') {
       if (task.assigneeId !== req.user.id) {
@@ -305,9 +353,43 @@ const updateTaskStatus = async (req, res) => {
 
     const updatedTask = await prisma.task.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        approvalStatus: status === 'APPROVED' ? 'APPROVED' : status === 'REJECTED' ? 'REJECTED' : task.approvalStatus
+      },
       include: { assignee: true, creator: true }
     });
+
+    // If task was completed, check if any dependent tasks are now fully unlocked
+    if (status === 'APPROVED' || status === 'COMPLETED') {
+      const dependents = await prisma.taskDependency.findMany({
+        where: { dependsOnTaskId: id },
+        include: {
+          task: {
+            include: {
+              prerequisites: {
+                include: { dependsOnTask: { select: { status: true } } }
+              }
+            }
+          }
+        }
+      });
+
+      for (const dep of dependents) {
+        const depTask = dep.task;
+        const allCompleted = depTask.prerequisites.every(
+          p => p.dependsOnTask.status === 'APPROVED' || p.dependsOnTask.status === 'COMPLETED'
+        );
+        if (allCompleted && depTask.assigneeId) {
+          await createNotification({
+            userId: depTask.assigneeId,
+            title: 'Task Dependency Unlocked',
+            message: `All prerequisites for task "${depTask.title}" are now completed! You can start work on it.`,
+            type: 'DEPENDENCY_UNLOCKED'
+          });
+        }
+      }
+    }
 
     // Log history
     await prisma.taskHistory.create({
@@ -319,31 +401,31 @@ const updateTaskStatus = async (req, res) => {
       }
     });
 
-     // Notify respective users
-     if (req.user.role === 'INTERN' || req.user.role === 'EMPLOYEE') {
-       // Notify creator / team leader
-       await createNotification({
-         userId: task.creatorId,
-         title: 'Task Status Updated',
-         message: `${req.user.name} set task "${task.title}" to ${status}.`,
-         type: 'TASK_UPDATED'
-       });
+    // Notify respective users
+    if (req.user.role === 'INTERN' || req.user.role === 'EMPLOYEE') {
+      // Notify creator / team leader
+      await createNotification({
+        userId: task.creatorId,
+        title: 'Task Status Updated',
+        message: `${req.user.name} set task "${task.title}" to ${status}.`,
+        type: 'TASK_UPDATED'
+      });
 
-       // Email Dispatch to Creator (Team Leader)
-       sendTaskStatusUpdateEmail(updatedTask.creator, updatedTask, updatedTask.assignee, status).catch((err) => {
-         console.error('Failed to send task update email to creator:', err);
-       });
+      // Email Dispatch to Creator (Team Leader)
+      sendTaskStatusUpdateEmail(updatedTask.creator, updatedTask, updatedTask.assignee, status).catch((err) => {
+        console.error('Failed to send task update email to creator:', err);
+      });
 
-       // Email Dispatch to Admins
-       const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-       for (let admin of admins) {
-         if (admin.id !== updatedTask.creatorId) {
-           sendTaskStatusUpdateEmail(admin, updatedTask, updatedTask.assignee, status).catch((err) => {
-             console.error('Failed to send task update email to admin:', err);
-           });
-         }
-       }
-     } else {
+      // Email Dispatch to Admins
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      for (let admin of admins) {
+        if (admin.id !== updatedTask.creatorId) {
+          sendTaskStatusUpdateEmail(admin, updatedTask, updatedTask.assignee, status).catch((err) => {
+            console.error('Failed to send task update email to admin:', err);
+          });
+        }
+      }
+    } else {
       // Notify assignee (Intern)
       let title = 'Task Status Updated';
       let msg = `Your task "${task.title}" was set to ${status}.`;
@@ -368,6 +450,10 @@ const updateTaskStatus = async (req, res) => {
       action: 'TASK_STATUS_UPDATE',
       details: `Updated task "${task.title}" status to ${status}`
     });
+
+    if (updatedTask.projectId) {
+      await syncProjectLifecycleChatRoom(updatedTask.projectId);
+    }
 
     res.json(updatedTask);
   } catch (error) {
@@ -530,6 +616,24 @@ const updateTask = async (req, res) => {
       }
     }
 
+    const targetProjectId = req.body.projectId || task.projectId;
+    const targetAssigneeId = assigneeId || task.assigneeId;
+
+    if (targetProjectId && targetAssigneeId) {
+      const project = await prisma.project.findUnique({
+        where: { id: targetProjectId },
+        include: { members: { select: { userId: true } } }
+      });
+      if (project) {
+        const isProjectMember = project.members.some(m => m.userId === targetAssigneeId) ||
+          project.leaderId === targetAssigneeId ||
+          project.creatorId === targetAssigneeId;
+        if (!isProjectMember) {
+          return res.status(400).json({ message: 'Task assignee must be a member of the selected project.' });
+        }
+      }
+    }
+
     let filePaths = [...(task.attachments || [])];
     if (req.files && req.files.length > 0) {
       const newPaths = req.files.map((file) => `/uploads/attachments/${file.filename}`);
@@ -582,6 +686,10 @@ const updateTask = async (req, res) => {
       action: 'TASK_EDIT',
       details: `Edited task "${updated.title}" (ID: ${id})`
     });
+
+    if (updated.projectId) {
+      await syncProjectLifecycleChatRoom(updated.projectId);
+    }
 
     res.json(updated);
   } catch (error) {
@@ -715,6 +823,45 @@ const deleteSubtask = async (req, res) => {
   }
 };
 
+const deleteTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await prisma.task.findUnique({ where: { id } });
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found.' });
+    }
+
+    if (req.user.role === 'TEAM_LEADER' && task.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'You can only delete tasks you created.' });
+    }
+
+    if (task.projectId) {
+      await syncProjectLifecycleChatRoom(task.projectId);
+    }
+
+    await prisma.task.delete({ where: { id } });
+
+    // Broadcast real-time Socket.io chat rooms update signal
+    const { getIo } = require('../socket');
+    const io = getIo();
+    if (io) {
+      io.emit('chat_rooms_updated');
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: 'TASK_DELETE',
+      details: `Deleted task "${task.title}" (ID: ${id})`
+    });
+
+    res.json({ message: 'Task deleted successfully.' });
+  } catch (error) {
+    console.error('Delete task error:', error);
+    res.status(500).json({ message: 'Failed to delete task.' });
+  }
+};
+
 module.exports = {
   createTask,
   getTasks,
@@ -725,5 +872,6 @@ module.exports = {
   updateTask,
   createSubtask,
   toggleSubtask,
-  deleteSubtask
+  deleteSubtask,
+  deleteTask
 };

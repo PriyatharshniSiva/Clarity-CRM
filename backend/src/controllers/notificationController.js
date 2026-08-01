@@ -13,6 +13,18 @@ const getNotifications = async (req, res) => {
   }
 };
 
+const getUnreadCount = async (req, res) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user.id, isRead: false }
+    });
+    res.json({ unreadCount: count });
+  } catch (error) {
+    console.error('Get unread count error:', error);
+    res.status(500).json({ message: 'Failed to get unread count.' });
+  }
+};
+
 const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -63,7 +75,9 @@ const deleteNotification = async (req, res) => {
       return res.status(404).json({ message: 'Notification not found.' });
     }
 
-    await prisma.notification.delete({ where: { id } });
+    await prisma.notification.delete({
+      where: { id }
+    });
 
     res.json({ message: 'Notification deleted successfully.' });
   } catch (error) {
@@ -72,9 +86,27 @@ const deleteNotification = async (req, res) => {
   }
 };
 
+const updatePreferences = async (req, res) => {
+  try {
+    const { preferences } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { notificationPreferences: preferences }
+    });
+
+    res.json({ message: 'Notification preferences updated.', preferences: updatedUser.notificationPreferences });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({ message: 'Failed to update preferences.' });
+  }
+};
+
 module.exports = {
   getNotifications,
+  getUnreadCount,
   markAsRead,
   markAllRead,
-  deleteNotification
+  deleteNotification,
+  updatePreferences
 };

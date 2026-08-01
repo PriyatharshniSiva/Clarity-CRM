@@ -104,22 +104,60 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { name, phone, college, department } = req.body;
+    const {
+      name,
+      phone,
+      college,
+      department,
+      candidateType,
+      degree,
+      currentYearSemester,
+      graduationYear,
+      internshipRole,
+      internshipDuration,
+      highestQualification,
+      keySkills,
+      companyName,
+      designation,
+      totalExperience
+    } = req.body;
+
     let profilePicPath = undefined;
+    let resumePath = undefined;
 
     if (req.file) {
       profilePicPath = `/uploads/profile-pics/${req.file.filename}`;
     }
+    if (req.files?.profilePic?.[0]) {
+      profilePicPath = `/uploads/profile-pics/${req.files.profilePic[0].filename}`;
+    }
+    if (req.files?.resume?.[0]) {
+      resumePath = `/uploads/resumes/${req.files.resume[0].filename}`;
+    }
+
+    const data = {
+      ...(name !== undefined && { name }),
+      ...(phone !== undefined && { phone }),
+      ...(college !== undefined && { college: college || companyName || null }),
+      ...(department !== undefined && { department }),
+      ...(candidateType !== undefined && { candidateType: candidateType || null }),
+      ...(degree !== undefined && { degree: degree || null }),
+      ...(currentYearSemester !== undefined && { currentYearSemester: currentYearSemester || null }),
+      ...(graduationYear !== undefined && { graduationYear: graduationYear || null }),
+      ...(internshipRole !== undefined && { internshipRole: internshipRole || null }),
+      ...(internshipDuration !== undefined && { internshipDuration: internshipDuration || null }),
+      ...(highestQualification !== undefined && { highestQualification: highestQualification || null }),
+      ...(keySkills !== undefined && { keySkills: keySkills || null }),
+      ...(companyName !== undefined && { companyName: companyName || college || null }),
+      ...(designation !== undefined && { designation: designation || null }),
+      ...(totalExperience !== undefined && { totalExperience: totalExperience || null }),
+      ...(profilePicPath && { profilePic: profilePicPath }),
+      ...(resumePath && { resume: resumePath })
+    };
 
     const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
-      data: {
-        name,
-        phone,
-        college,
-        department,
-        ...(profilePicPath && { profilePic: profilePicPath })
-      }
+      data
     });
 
     await logActivity({

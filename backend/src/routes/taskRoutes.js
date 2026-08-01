@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createTask, getTasks, getTaskById, updateTaskStatus, submitTask, addComment, updateTask, createSubtask, toggleSubtask, deleteSubtask } = require('../controllers/taskController');
+const { createTask, getTasks, getTaskById, updateTaskStatus, submitTask, addComment, updateTask, createSubtask, toggleSubtask, deleteSubtask, deleteTask } = require('../controllers/taskController');
 const { authenticate, requireRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -10,6 +10,7 @@ router.post('/', requireRole(['ADMIN', 'TEAM_LEADER']), upload.array('attachment
 router.get('/', getTasks);
 router.get('/:id', getTaskById);
 router.put('/:id', requireRole(['ADMIN', 'TEAM_LEADER']), upload.array('attachments', 5), updateTask);
+router.delete('/:id', requireRole(['ADMIN', 'TEAM_LEADER']), deleteTask);
 router.put('/:id/status', updateTaskStatus);
 router.post('/:id/submit', requireRole(['INTERN', 'EMPLOYEE']), upload.array('files', 5), submitTask);
 router.post('/:id/comment', addComment);

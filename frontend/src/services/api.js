@@ -45,12 +45,36 @@ export const getUploadUrl = (path) => {
   return encodeURI(`${backendServer}${cleanPath}`);
 };
 
-export const downloadFile = async (filePath, customFileName) => {
+export const downloadChatAttachment = async (messageOrPath, customFileName) => {
   try {
-    if (!filePath) return;
-    const cleanFileName = filePath.split('/').pop().split('\\').pop();
-    const downloadUrl = `${API_URL}/download-file?file=${encodeURIComponent(cleanFileName)}`;
-    
+    let downloadUrl = '';
+    let defaultName = '';
+
+    if (typeof messageOrPath === 'object' && messageOrPath !== null) {
+      const msg = messageOrPath;
+      defaultName = msg.fileName || msg.originalFileName || customFileName || msg.name || '';
+      if (!defaultName && msg.attachmentUrl) {
+        defaultName = msg.attachmentUrl.split('/').pop().split('\\').pop();
+      }
+      if (msg.id) {
+        downloadUrl = `${API_URL}/chat/messages/${msg.id}/download`;
+      } else if (msg.attachmentUrl) {
+        downloadUrl = `${API_URL}/download-file?file=${encodeURIComponent(msg.attachmentUrl)}&name=${encodeURIComponent(defaultName)}`;
+      } else if (msg.url) {
+        downloadUrl = `${API_URL}/download-file?file=${encodeURIComponent(msg.url)}&name=${encodeURIComponent(msg.name || defaultName)}`;
+      }
+    } else if (typeof messageOrPath === 'string') {
+      const inputStr = messageOrPath.trim();
+      defaultName = customFileName || '';
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inputStr)) {
+        downloadUrl = `${API_URL}/chat/messages/${inputStr}/download`;
+      } else {
+        downloadUrl = `${API_URL}/download-file?file=${encodeURIComponent(inputStr)}&name=${encodeURIComponent(defaultName)}`;
+      }
+    }
+
+    if (!downloadUrl) return false;
+
     const token = localStorage.getItem('token');
     const response = await fetch(downloadUrl, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -60,21 +84,62 @@ export const downloadFile = async (filePath, customFileName) => {
       throw new Error(`Download HTTP error! status: ${response.status}`);
     }
 
+    // Extract original filename from Content-Disposition header (supports filename*=UTF-8'' and filename="...")
+    let filename = '';
+    const disposition = response.headers.get('content-disposition');
+    if (disposition) {
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      if (utf8Match && utf8Match[1]) {
+        filename = decodeURIComponent(utf8Match[1]);
+      } else {
+        const match = disposition.match(/filename="?([^";]+)"?/i);
+        if (match && match[1]) {
+          filename = decodeURIComponent(match[1]);
+        }
+      }
+    }
+
+    if (!filename || filename === 'undefined') {
+      filename = defaultName || 'download';
+    }
+
+    // Clean any surrounding quotes
+    filename = filename.replace(/^"|"$/g, '').trim();
+
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = customFileName || cleanFileName;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(blobUrl);
+    return true;
   } catch (error) {
-    console.error('downloadFile helper error:', error);
-    // Direct fallback
-    const directUrl = getUploadUrl(filePath);
-    window.open(directUrl, '_blank');
+    console.error('Authenticated chat download error:', error);
+    throw error;
   }
+};
+
+export const downloadFile = async (filePath, customFileName) => {
+  return downloadChatAttachment(filePath, customFileName);
+};
+
+import { io } from 'socket.io-client';
+
+let socketInstance = null;
+export const getSocket = () => {
+  if (!socketInstance) {
+    const backendServer = API_URL.replace(/\/api\/?$/, '');
+    socketInstance = io(backendServer, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+  }
+  return socketInstance;
 };
 
 export default api;

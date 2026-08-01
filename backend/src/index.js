@@ -19,6 +19,14 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const repositoryRoutes = require('./routes/repositoryRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
+const assetRoutes = require('./routes/assetRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const projectRoutes = require('./routes/projectRoutes');
+const milestoneRoutes = require('./routes/milestoneRoutes');
+const taskDependencyRoutes = require('./routes/taskDependencyRoutes');
+const workLogRoutes = require('./routes/workLogRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const aiRoutes = require('./ai/aiRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,15 +39,19 @@ const corsOptions = {
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:5175',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174'
     ];
-    if (!origin || allowed.includes(origin)) {
+    if (!origin || allowed.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS policy: origin "${origin}" not allowed`));
+      callback(null, true);
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Disposition']
 };
 
 app.use(cors(corsOptions));
@@ -47,6 +59,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const fs = require('fs');
+const { authenticate } = require('./middleware/auth');
 
 // Serve static upload directories with headers
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
@@ -57,21 +70,47 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 }));
 
 // Dedicated file download endpoint with proper MIME headers & Content-Disposition
-app.get('/api/download-file', (req, res) => {
+app.get('/api/download-file', authenticate, (req, res) => {
   try {
     const rawFile = req.query.file || req.query.filename;
     if (!rawFile) {
       return res.status(400).json({ message: 'File parameter is required.' });
     }
 
-    const cleanFileName = path.basename(rawFile);
-    const filePath = path.join(__dirname, '../uploads', cleanFileName);
+    // Decode URL parameter
+    let fileRelPath = decodeURIComponent(rawFile).trim();
 
-    if (!fs.existsSync(filePath)) {
+    // Normalization & leading slash cleanup
+    if (fileRelPath.startsWith('/') || fileRelPath.startsWith('\\')) {
+      fileRelPath = fileRelPath.substring(1);
+    }
+
+    // Strip optional leading 'uploads/' prefix
+    let targetRelPath = fileRelPath;
+    if (/^uploads[/\\]/i.test(targetRelPath)) {
+      targetRelPath = targetRelPath.replace(/^uploads[/\\]/i, '');
+    }
+
+    const uploadsDir = path.resolve(__dirname, '../uploads');
+    const resolvedPath = path.resolve(uploadsDir, targetRelPath);
+
+    // SECURITY CHECK: Path Traversal Prevention
+    if (!resolvedPath.startsWith(uploadsDir)) {
+      console.warn(`[SECURITY] Path traversal blocked for: ${rawFile}`);
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      console.warn(`File download failed - physical file not found at: ${resolvedPath}`);
       return res.status(404).json({ message: 'File not found on server.' });
     }
 
-    res.download(filePath, cleanFileName, (err) => {
+    // Use custom download name from query if provided, otherwise fallback to physical basename
+    const customName = req.query.name || req.query.originalFileName || path.basename(resolvedPath);
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(customName)}"; filename*=UTF-8''${encodeURIComponent(customName)}`);
+
+    res.download(resolvedPath, customName, (err) => {
       if (err && !res.headersSent) {
         console.error('File download stream error:', err);
         res.status(500).json({ message: 'Error downloading file.' });
@@ -83,7 +122,24 @@ app.get('/api/download-file', (req, res) => {
   }
 });
 
+const superAdminRoutes = require('./routes/superAdminRoutes');
+
 // Mount API routes
+app.use('/api/super-admin', superAdminRoutes);
+app.get('/api/platform/settings', async (req, res) => {
+  try {
+    const prisma = require('./utils/db');
+    let settings = await prisma.platformSettings.findUnique({ where: { id: 'PLATFORM' } });
+    if (!settings) {
+      settings = await prisma.platformSettings.create({
+        data: { id: 'PLATFORM', companyName: 'Innoviety Enterprise', selectedTheme: 'emerald', themeMode: 'light' }
+      });
+    }
+    res.json(settings);
+  } catch (err) {
+    res.json({ companyName: 'Innoviety Enterprise', selectedTheme: 'emerald', themeMode: 'light', companyLogo: null });
+  }
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
@@ -97,6 +153,14 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/repositories', repositoryRoutes);
 app.use('/api/leaves', leaveRoutes);
+app.use('/api/assets', assetRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/milestones', milestoneRoutes);
+app.use('/api/task-dependencies', taskDependencyRoutes);
+app.use('/api/worklogs', workLogRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Simple healthcheck / diagnostic
 app.get('/health', (req, res) => {
@@ -116,7 +180,10 @@ app.use((err, req, res, next) => {
 // Initialize Socket.io
 socketManager.init(server);
 
+const { ensureCompanyChatRoom } = require('./services/companyChatService');
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Enterprise CRM backend server is running on port ${PORT}`);
+  await ensureCompanyChatRoom();
 });

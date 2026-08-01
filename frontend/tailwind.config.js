@@ -17,8 +17,12 @@ export default {
         primary: {
           DEFAULT: "rgb(var(--primary))",
           hover: "rgb(var(--primary-hover))",
+          light: "rgb(var(--primary-light))",
+          dark: "rgb(var(--primary-dark))",
           foreground: "rgb(var(--primary-foreground))",
         },
+        "login-start": "rgb(var(--login-start))",
+        "login-end": "rgb(var(--login-end))",
         secondary: "rgb(var(--secondary))",
         muted: {
           DEFAULT: "rgb(var(--muted))",
@@ -43,6 +47,11 @@ export default {
       backdropFilter: {
         none: 'none',
         blur: 'blur(20px)',
+      },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
       },
     },
   },

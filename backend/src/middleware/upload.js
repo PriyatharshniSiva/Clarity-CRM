@@ -4,7 +4,7 @@ const fs = require('fs');
 
 // Ensure upload folders exist
 const uploadDir = path.join(__dirname, '../../uploads');
-const subDirs = ['profile-pics', 'attachments', 'submissions'];
+const subDirs = ['profile-pics', 'attachments', 'submissions', 'resumes'];
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -23,6 +23,8 @@ const storage = multer.diskStorage({
     
     if (file.fieldname === 'profilePic') {
       folder = 'profile-pics';
+    } else if (file.fieldname === 'resume') {
+      folder = 'resumes';
     } else if (file.fieldname === 'submissions' || file.fieldname === 'files') {
       folder = 'submissions';
     }
@@ -37,10 +39,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
   fileFilter: (req, file, cb) => {
-    // Standard file formats
-    cb(null, true);
+    if (file.fieldname === 'resume') {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (['.pdf', '.doc', '.docx'].includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF, DOC, and DOCX files are allowed for resumes.'));
+      }
+    } else {
+      cb(null, true);
+    }
   }
 });
 

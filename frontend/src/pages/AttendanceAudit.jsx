@@ -202,37 +202,37 @@ const AttendanceAudit = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+        <div className="w-full min-w-0 overflow-x-auto">
+          <table className="w-full min-w-[1000px] text-sm border-collapse">
             <thead>
-              <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 text-left">
-                <th className="px-6 py-4">Applicant Employee</th>
-                <th className="px-6 py-4">Letter Subject & Type</th>
-                <th className="px-6 py-4">Date Duration</th>
-                <th className="px-6 py-4">Sanction Status</th>
-                <th className="px-6 py-4 text-center">Letter Body</th>
-                <th className="px-6 py-4 text-right">Super Admin Actions</th>
+              <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 text-left whitespace-nowrap">
+                <th className="px-6 py-4 whitespace-nowrap">Applicant Employee</th>
+                <th className="px-6 py-4 whitespace-nowrap">Letter Subject & Type</th>
+                <th className="px-6 py-4 whitespace-nowrap">Date Duration</th>
+                <th className="px-6 py-4 whitespace-nowrap">Sanction Status</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap">Letter Body</th>
+                <th className="px-6 py-4 text-right whitespace-nowrap">Admin Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/25">
               {leaves.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground whitespace-nowrap">
                     No leave or WFH application letters submitted.
                   </td>
                 </tr>
               ) : (
                 leaves.map((l) => (
-                  <tr key={l.id} className="hover:bg-muted/10 transition-all text-xs">
-                    <td className="px-6 py-4 font-semibold">
+                  <tr key={l.id} className="hover:bg-muted/10 transition-all text-xs whitespace-nowrap">
+                    <td className="px-6 py-4 font-semibold whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="font-bold text-foreground text-sm">{l.user?.name}</span>
                         <span className="text-[10px] text-muted-foreground">{l.user?.employeeId} ({l.user?.role?.replace('_', ' ')})</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        <span className="font-bold text-foreground max-w-xs truncate">{l.subject || l.reason}</span>
+                        <span className="font-bold text-foreground max-w-xs truncate block" title={l.subject || l.reason}>{l.subject || l.reason}</span>
                         <span className={`inline-flex w-max rounded px-2 py-0.5 text-[10px] font-bold font-mono ${l.type === 'WFH' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-rose-500/10 text-rose-600'}`}>
                           {l.type}
                         </span>
@@ -241,7 +241,7 @@ const AttendanceAudit = () => {
                     <td className="px-6 py-4 whitespace-nowrap font-medium">
                       {formatLeavePeriod(l.startDate, l.endDate)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       {l.status === 'APPROVED' ? (
                         <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-600">
                           ACCEPTED (WFH Assigned)
@@ -256,7 +256,7 @@ const AttendanceAudit = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <button
                         onClick={() => setViewingLetter(l)}
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 transition-all"
@@ -265,13 +265,13 @@ const AttendanceAudit = () => {
                         <span>Read Letter</span>
                       </button>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                       {l.status === 'PENDING' ? (
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => handleUpdateLeaveStatus(l.id, 'APPROVED')}
                             disabled={submittingStatus}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1"
+                            className="bg-primary hover:bg-primary-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1"
                             title="Accept Letter & Assign WFH"
                           >
                             <CheckCircle className="h-3.5 w-3.5" />
@@ -396,59 +396,59 @@ const AttendanceAudit = () => {
           </div>
 
           {/* Logs Table */}
-          <div className="overflow-x-auto rounded-2xl border border-border/40 bg-card shadow-premium text-left">
-            <table className="w-full text-sm border-collapse">
+          <div className="w-full min-w-0 overflow-x-auto rounded-2xl border border-border/40 bg-card shadow-premium text-left">
+            <table className="w-full min-w-[1100px] text-sm border-collapse">
               <thead>
-                <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20">
-                  <th className="px-6 py-4">Members</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Clock In</th>
-                  <th className="px-6 py-4">Clock Out</th>
-                  <th className="px-6 py-4">Hours</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Telemetry IP & Device</th>
-                  <th className="px-6 py-4">Location Signature</th>
-                  {user.role === 'ADMIN' && <th className="px-6 py-4 text-right">Edit</th>}
+                <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 whitespace-nowrap">
+                  <th className="px-6 py-4 whitespace-nowrap">Members</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Date</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Clock In</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Clock Out</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Hours</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Status</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Telemetry IP & Device</th>
+                  <th className="px-6 py-4 whitespace-nowrap">Location Signature</th>
+                  {user.role === 'ADMIN' && <th className="px-6 py-4 text-right whitespace-nowrap">Edit</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/25">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={user.role === 'ADMIN' ? 9 : 8} className="px-6 py-10 text-center text-muted-foreground">
+                    <td colSpan={user.role === 'ADMIN' ? 9 : 8} className="px-6 py-10 text-center text-muted-foreground whitespace-nowrap">
                       No attendance logs match selected filters.
                     </td>
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-muted/10 transition-all text-xs">
-                      <td className="px-6 py-4 font-semibold">
+                    <tr key={log.id} className="hover:bg-muted/10 transition-all text-xs whitespace-nowrap">
+                      <td className="px-6 py-4 font-semibold whitespace-nowrap">
                         <div className="flex flex-col">
                           <span className="font-bold text-foreground text-sm">{log.user?.name}</span>
                           <span className="text-[10px] text-muted-foreground">{log.user?.employeeId}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-medium">{new Date(log.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 font-mono">{new Date(log.clockIn).toLocaleTimeString()}</td>
-                      <td className="px-6 py-4 font-mono">
+                      <td className="px-6 py-4 font-medium whitespace-nowrap">{new Date(log.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 font-mono whitespace-nowrap">{new Date(log.clockIn).toLocaleTimeString()}</td>
+                      <td className="px-6 py-4 font-mono whitespace-nowrap">
                         {log.clockOut ? new Date(log.clockOut).toLocaleTimeString() : 'Shift Active'}
                       </td>
-                      <td className="px-6 py-4">{log.workingHours ? `${log.workingHours} hrs` : '—'}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">{log.workingHours ? `${log.workingHours} hrs` : '—'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${log.status === 'PRESENT' || log.status === 'WORK_FROM_HOME' ? 'bg-emerald-500/10 text-emerald-600' : log.status === 'LATE' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-red-500/10 text-red-500'}`}>
                           {log.status} {log.lateMinutes ? `(${log.lateMinutes}m late)` : ''}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <span className="font-mono">{log.ipAddress || '127.0.0.1'}</span>
                           <span className="text-[10px] text-muted-foreground">{log.browser || 'Browser'} ({log.device || 'Desktop'})</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 max-w-xs truncate" title={log.clockInLocation}>
+                      <td className="px-6 py-4 max-w-xs truncate whitespace-nowrap" title={log.clockInLocation}>
                         {log.clockInLocation || '—'}
                       </td>
                       {user.role === 'ADMIN' && (
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
                           <button className="text-primary hover:text-primary-hover p-1 rounded hover:bg-muted" onClick={() => openEditModal(log)}>
                             <Edit2 className="h-4 w-4" />
                           </button>
@@ -465,7 +465,7 @@ const AttendanceAudit = () => {
         renderLeavesApprovalTab()
       )}
 
-      {/* View Full Formal Letter Modal for Super Admin */}
+      {/* View Full Formal Letter Modal for Admin */}
       {viewingLetter && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-left">
           <div className="w-full max-w-xl rounded-2xl border border-border/40 bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">

@@ -3,6 +3,16 @@ const socketManager = require('../socket');
 
 const createNotification = async ({ userId, title, message, type }) => {
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, notificationPreferences: true }
+    });
+
+    if (user && user.notificationPreferences && user.notificationPreferences[type] === false) {
+      // User disabled notifications for this type
+      return null;
+    }
+
     const notification = await prisma.notification.create({
       data: {
         userId,
@@ -18,6 +28,7 @@ const createNotification = async ({ userId, title, message, type }) => {
     return notification;
   } catch (error) {
     console.error('Error creating database notification:', error);
+    return null;
   }
 };
 

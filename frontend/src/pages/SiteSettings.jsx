@@ -107,94 +107,97 @@ const SiteSettings = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-300 text-left pt-2 pb-10 px-2 sm:px-4">
       {alert && (
-        <div className={`flex items-center justify-between p-4 rounded-xl border ${alert.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : 'border-red-500/20 bg-red-500/5 text-red-500'} text-xs font-semibold`}>
+        <div className={`flex items-center justify-between p-4 rounded-2xl border ${alert.type === 'success' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-red-500/30 bg-red-500/10 text-red-500'} text-xs font-semibold`}>
           <span>{alert.message}</span>
-          <button onClick={() => setAlert(null)} className="font-bold">✕</button>
+          <button onClick={() => setAlert(null)} className="font-bold hover:opacity-75">✕</button>
         </div>
       )}
 
       {/* Main Settings Panel */}
-      <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-        <div className="flex items-center gap-3 border-b border-border/30 pb-4 mb-6">
-          <div className="rounded-xl bg-primary/10 p-2 text-primary">
-            <Shield className="h-5 w-5" />
+      <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-md text-left">
+        <div className="flex items-center gap-3 border-b border-border/40 pb-4 mb-6">
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary border border-primary/20">
+            <Shield className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-foreground">Global Site Settings</h2>
-            <p className="text-xs text-muted-foreground">Manage shift timings, geofencing ranges, mail routing, and general application branding.</p>
+            <h2 className="text-base font-extrabold text-foreground">Global Site Settings</h2>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">Manage shift timings, geofencing ranges, mail routing, and general application branding.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* General Branding Section */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
-              <Building className="h-4 w-4 text-muted-foreground" />
-              Branding & Company Info
+            <h3 className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Building className="h-4 w-4 text-primary" />
+              <span>Branding & Company Info</span>
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Company Name</label>
+                <label className="text-xs font-bold text-muted-foreground">Company Name</label>
                 <input
                   type="text"
                   name="companyName"
                   value={settings.companyName}
                   onChange={handleChange}
                   placeholder="e.g. MRF Enterprise"
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">System Sender Email</label>
+                <label className="text-xs font-bold text-muted-foreground">System Sender Email</label>
                 <input
                   type="email"
                   name="senderEmail"
                   value={settings.senderEmail}
                   onChange={handleChange}
                   placeholder="e.g. notifications@enterprise.com"
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
               </div>
             </div>
           </div>
 
-          <hr className="border-border/30" />
+          <hr className="border-border/40" />
 
           {/* Attendance Geofencing Location Configuration */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                Office Geofencing Configuration
+              <h3 className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <span>Office Geofencing Configuration</span>
               </h3>
               <button
                 type="button"
                 onClick={handleGPSAutofill}
-                className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary font-bold px-3 py-1.5 rounded-lg border border-primary/20 transition-all"
+                className="text-[11px] bg-primary/10 hover:bg-primary/20 text-primary font-extrabold px-3.5 py-1.5 rounded-full border border-primary/20 transition-all cursor-pointer"
               >
                 Use My Current Location
               </button>
             </div>
 
             <div className="flex flex-col gap-1.5 mb-2">
-              <label className="text-xs font-semibold text-muted-foreground">Office Location Name / Address</label>
+              <label className="text-xs font-bold text-muted-foreground">Office Location Name / Address</label>
               <input
                 type="text"
                 name="officeLocationName"
                 value={settings.officeLocationName || ''}
                 onChange={handleChange}
                 placeholder="e.g. MRF Office, Bangalore"
+                className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Office Latitude</label>
+                <label className="text-xs font-bold text-muted-foreground">Office Latitude</label>
                 <input
                   type="number"
                   step="0.000001"
@@ -202,12 +205,13 @@ const SiteSettings = () => {
                   value={settings.officeLatitude}
                   onChange={handleChange}
                   placeholder="e.g. 12.971598"
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Office Longitude</label>
+                <label className="text-xs font-bold text-muted-foreground">Office Longitude</label>
                 <input
                   type="number"
                   step="0.000001"
@@ -215,59 +219,63 @@ const SiteSettings = () => {
                   value={settings.officeLongitude}
                   onChange={handleChange}
                   placeholder="e.g. 77.594562"
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Allowed Range Radius (Meters)</label>
+                <label className="text-xs font-bold text-muted-foreground">Allowed Range Radius (Meters)</label>
                 <input
                   type="number"
                   name="allowedRadiusMeters"
                   value={settings.allowedRadiusMeters}
                   onChange={handleChange}
                   placeholder="e.g. 200"
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground italic">
+            <p className="text-[11px] text-muted-foreground italic font-medium">
               Attendance clock-ins/outs will be geofenced. Members must be within the specified radius (in meters) of this latitude/longitude to mark attendance.
             </p>
           </div>
 
-          <hr className="border-border/30" />
+          <hr className="border-border/40" />
 
           {/* Shift Configuration Section */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Dynamic Shift Timings
+            <h3 className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <span>Dynamic Shift Timings</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Intern Shift */}
-              <div className="p-4 rounded-xl border border-border/30 bg-muted/10 space-y-4">
-                <h4 className="text-xs font-bold text-indigo-500">Internship Core Hours</h4>
+              <div className="p-5 rounded-2xl border border-border/60 bg-background/50 space-y-4">
+                <h4 className="text-xs font-bold text-primary">Internship Core Hours</h4>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground">Clock-in Deadline</label>
+                    <label className="text-[11px] font-bold text-muted-foreground">Clock-in Deadline</label>
                     <input
                       type="time"
                       name="internShiftStart"
                       value={settings.internShiftStart}
                       onChange={handleChange}
+                      className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary outline-none"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground">Clock-out Time</label>
+                    <label className="text-[11px] font-bold text-muted-foreground">Clock-out Time</label>
                     <input
                       type="time"
                       name="internShiftEnd"
                       value={settings.internShiftEnd}
                       onChange={handleChange}
+                      className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary outline-none"
                       required
                     />
                   </div>
@@ -275,27 +283,29 @@ const SiteSettings = () => {
               </div>
 
               {/* Team Leader Shift */}
-              <div className="p-4 rounded-xl border border-border/30 bg-muted/10 space-y-4">
-                <h4 className="text-xs font-bold text-violet-500">Admin Core Hours</h4>
+              <div className="p-5 rounded-2xl border border-border/60 bg-background/50 space-y-4">
+                <h4 className="text-xs font-bold text-primary">Team Leader Core Hours</h4>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground">Clock-in Deadline</label>
+                    <label className="text-[11px] font-bold text-muted-foreground">Clock-in Deadline</label>
                     <input
                       type="time"
                       name="tlShiftStart"
                       value={settings.tlShiftStart}
                       onChange={handleChange}
+                      className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary outline-none"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground">Clock-out Time</label>
+                    <label className="text-[11px] font-bold text-muted-foreground">Clock-out Time</label>
                     <input
                       type="time"
                       name="tlShiftEnd"
                       value={settings.tlShiftEnd}
                       onChange={handleChange}
+                      className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary outline-none"
                       required
                     />
                   </div>
@@ -304,12 +314,12 @@ const SiteSettings = () => {
             </div>
 
             {/* Time Window Rules Configuration */}
-            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-4">
+            <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-4">
               <h4 className="text-xs font-bold text-primary">Clock-In Time Window & Grace Period Rules</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Early Clock-In Window (Minutes before shift start)</label>
+                  <label className="text-xs font-bold text-muted-foreground">Early Clock-In Window (Minutes before shift start)</label>
                   <input
                     type="number"
                     min="0"
@@ -318,13 +328,14 @@ const SiteSettings = () => {
                     value={settings.earlyWindowMinutes}
                     onChange={handleChange}
                     placeholder="e.g. 30"
+                    className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                     required
                   />
-                  <span className="text-[10px] text-muted-foreground italic">Default: 30 mins (Opens at Shift Start − Early Window)</span>
+                  <span className="text-[10px] text-muted-foreground italic font-medium">Default: 30 mins (Opens at Shift Start − Early Window)</span>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Grace Period (Minutes after shift start for Late clock-in)</label>
+                  <label className="text-xs font-bold text-muted-foreground">Grace Period (Minutes after shift start for Late clock-in)</label>
                   <input
                     type="number"
                     min="0"
@@ -333,21 +344,22 @@ const SiteSettings = () => {
                     value={settings.gracePeriodMinutes}
                     onChange={handleChange}
                     placeholder="e.g. 15"
+                    className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                     required
                   />
-                  <span className="text-[10px] text-muted-foreground italic">Default: 15 mins (Closes at Shift Start + Grace Period)</span>
+                  <span className="text-[10px] text-muted-foreground italic font-medium">Default: 15 mins (Closes at Shift Start + Grace Period)</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border/30">
+          <div className="flex justify-end pt-4 border-t border-border/40">
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-bold text-white shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 disabled:opacity-50 transition-all"
             >
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 text-white" />
               {loading ? 'Saving Changes...' : 'Save Configuration'}
             </button>
           </div>

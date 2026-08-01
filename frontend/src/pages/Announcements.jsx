@@ -126,7 +126,7 @@ const Announcements = () => {
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-primary/10 text-primary">
         <Globe className="h-2.5 w-2.5" />
         <span>Public Broadcast</span>
       </span>
@@ -134,7 +134,7 @@ const Announcements = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+    <div className="flex-1 flex flex-col space-y-6 text-left animate-in fade-in duration-300">
       {alert && (
         <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 text-primary text-xs font-semibold">
           <span>{alert}</span>

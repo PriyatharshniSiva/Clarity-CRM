@@ -11,7 +11,8 @@ import {
   Upload,
   CheckCircle,
   AlertTriangle,
-  History
+  History,
+  Laptop
 } from 'lucide-react';
 
 const Profile = () => {
@@ -38,6 +39,7 @@ const Profile = () => {
   const [alert, setAlert] = useState({ type: '', text: '' });
   const [tempPassWarning, setTempPassWarning] = useState(false);
   const [userLogs, setUserLogs] = useState([]);
+  const [assignedAssets, setAssignedAssets] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,6 +48,20 @@ const Profile = () => {
     if (query.get('changePassword') === 'true') {
       setTempPassWarning(true);
     }
+
+    // Fetch user details including assigned assets
+    const fetchUserDetails = async () => {
+      try {
+        if (user?.id) {
+          const res = await api.get(`/users/${user.id}`);
+          setAssignedAssets(res.data.assignedAssets || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchUserDetails();
 
     // Fetch user activity log history
     const fetchUserLogs = async () => {
@@ -149,33 +165,33 @@ const Profile = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+    <div className="space-y-6 w-full max-w-[1600px] mx-auto pt-2 pb-10 px-2 sm:px-4 animate-in fade-in duration-300 text-left">
       {/* DOB temporary password warning */}
       {tempPassWarning && (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-warning bg-warning/5 text-warning-foreground text-xs font-semibold text-left">
-          <AlertTriangle className="h-5 w-5 text-warning animate-bounce" />
+        <div className="flex items-center gap-3 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 animate-bounce" />
           <div>
             <p className="font-bold">Change Password Immediately!</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Your account is currently using your Date of Birth as a temporary password. Update it now to ensure account security.</p>
+            <p className="text-[11px] opacity-90 mt-0.5">Your account is currently using your Date of Birth as a temporary password. Update it now to ensure account security.</p>
           </div>
         </div>
       )}
 
       {alert.text && (
-        <div className={`flex items-center justify-between p-4 rounded-xl border ${alert.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : 'border-red-500/20 bg-red-500/5 text-red-500'} text-xs font-semibold`}>
+        <div className={`flex items-center justify-between p-4 rounded-2xl border ${alert.type === 'success' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-red-500/30 bg-red-500/10 text-red-500'} text-xs font-semibold`}>
           <span>{alert.text}</span>
-          <button onClick={() => setAlert({ type: '', text: '' })}>✕</button>
+          <button onClick={() => setAlert({ type: '', text: '' })} className="hover:opacity-75">✕</button>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Card & Avatar */}
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-center flex flex-col items-center justify-center">
+        <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-md text-center flex flex-col items-center justify-center">
           <div className="relative group">
             <img
               src={previewUrl || (user?.profilePic ? getUploadUrl(user.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`)}
               alt={user?.name}
-              className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/10 shadow-lg transition-all group-hover:opacity-90"
+              className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/20 shadow-lg transition-all group-hover:opacity-90"
             />
             <input
               type="file"
@@ -186,141 +202,216 @@ const Profile = () => {
             />
             <label
               htmlFor="avatar-upload"
-              className="absolute -bottom-2 -right-2 p-2 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl cursor-pointer shadow-md hover:scale-105 transition-all flex items-center gap-1"
+              className="absolute -bottom-2 -right-2 p-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl cursor-pointer shadow-md hover:scale-105 transition-all flex items-center justify-center"
               title="Click to upload new profile photo"
             >
               <Upload className="h-4 w-4" />
             </label>
           </div>
 
-          <h3 className="mt-4 font-bold text-base">{user?.name}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {user?.employeeId} • <span className="capitalize">{user?.role === 'ADMIN' ? 'Super Admin' : user?.role?.toLowerCase().replace('_', ' ')}</span>
+          <h3 className="mt-4 font-black text-lg text-foreground">{user?.name}</h3>
+          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
+            {user?.employeeId || 'ID-001'} • <span className="capitalize text-primary font-bold">{user?.role === 'ADMIN' ? 'Admin' : user?.role?.toLowerCase().replace('_', ' ')}</span>
           </p>
 
-          <div className="mt-6 border-t border-border/30 pt-4 w-full text-xs space-y-2.5 text-left text-muted-foreground">
-            <p><strong>Email:</strong> <span className="text-foreground">{user?.email}</span></p>
-            <p><strong>Department:</strong> <span className="text-foreground">{user?.department || 'N/A'}</span></p>
-            <p><strong>Joining Date:</strong> <span className="text-foreground">{new Date(user?.joiningDate).toLocaleDateString()}</span></p>
+          <div className="mt-6 border-t border-border/40 pt-4 w-full text-xs space-y-3 text-left text-muted-foreground font-medium">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-muted-foreground">Email</span>
+              <span className="text-foreground font-semibold truncate max-w-[170px]">{user?.email}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-muted-foreground">Department</span>
+              <span className="text-foreground font-semibold">{user?.department || 'Management'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-muted-foreground">Joining Date</span>
+              <span className="text-foreground font-semibold">
+                {user?.joiningDate ? new Date(user.joiningDate).toLocaleDateString() : '01/01/2023'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Editing Info fields Form */}
-        <div className="md:col-span-2 rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-          <h3 className="text-xs font-bold uppercase tracking-tight text-foreground/80 mb-4 border-b border-border/30 pb-2">
-            Personal Information
+        <div className="md:col-span-2 rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-md text-left">
+          <h3 className="text-sm font-extrabold uppercase tracking-wide text-foreground mb-5 border-b border-border/40 pb-3 flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            <span>Personal Information</span>
           </h3>
 
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
+                <label className="text-xs font-bold text-muted-foreground">Full Name</label>
                 <input
                   type="text"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  placeholder="Enter full name"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Phone Number</label>
+                <label className="text-xs font-bold text-muted-foreground">Phone Number</label>
                 <input
                   type="text"
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  placeholder="Enter phone number"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">College</label>
+                <label className="text-xs font-bold text-muted-foreground">College / University</label>
                 <input
                   type="text"
                   value={profileForm.college}
                   onChange={(e) => setProfileForm({ ...profileForm, college: e.target.value })}
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  placeholder="Enter college name"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Department</label>
+                <label className="text-xs font-bold text-muted-foreground">Department</label>
                 <input
                   type="text"
                   value={profileForm.department}
                   onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  placeholder="Enter department"
                 />
               </div>
             </div>
 
             {avatar && (
-              <p className="text-[10px] text-primary font-bold">New Avatar image selected: "{avatar.name}". Save changes to apply.</p>
+              <p className="text-[11px] text-primary font-bold">New Avatar image selected: "{avatar.name}". Save changes to apply.</p>
             )}
 
-            <button type="submit" disabled={loading} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50">
-              Save Information Changes
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-full bg-primary px-6 py-3 text-xs font-bold text-white shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50"
+              >
+                Save Information Changes
+              </button>
+            </div>
           </form>
         </div>
       </div>
 
+      {/* Assigned Hardware & Assets Section */}
+      <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-md text-left space-y-4">
+        <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
+            <Laptop className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold text-foreground">Assigned Hardware & Assets</h3>
+            <p className="text-xs text-muted-foreground font-medium">Laptops, monitors, mobile devices, and equipment issued to your profile.</p>
+          </div>
+        </div>
+
+        {assignedAssets.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-6 text-center italic font-semibold">No company assets are currently assigned to your account.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {assignedAssets.map((asset) => (
+              <div key={asset.id} className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-muted-foreground">{asset.assetId}</span>
+                    <span className="text-[9px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 uppercase">
+                      {asset.status}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold mt-2 text-foreground">{asset.name}</h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">{asset.brand} {asset.model}</p>
+                </div>
+                <div className="mt-3 border-t border-border/40 pt-2 text-[10px] text-muted-foreground font-semibold flex justify-between">
+                  <span>Category: {asset.category}</span>
+                  <span>S/N: {asset.serialNumber || 'N/A'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Change password panel */}
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-          <h3 className="text-xs font-bold uppercase tracking-tight text-foreground/80 mb-4 border-b border-border/30 pb-2">
-            Change Account Password
+        <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-md text-left">
+          <h3 className="text-sm font-extrabold uppercase tracking-wide text-foreground mb-5 border-b border-border/40 pb-3 flex items-center gap-2">
+            <Lock className="h-4 w-4 text-primary" />
+            <span>Change Account Password</span>
           </h3>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Current Password</label>
+              <label className="text-xs font-bold text-muted-foreground">Current Password</label>
               <input
                 type="password"
                 placeholder="Current password"
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">New Secure Password</label>
+              <label className="text-xs font-bold text-muted-foreground">New Secure Password</label>
               <input
                 type="password"
                 placeholder="New password"
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Confirm New Password</label>
+              <label className="text-xs font-bold text-muted-foreground">Confirm New Password</label>
               <input
                 type="password"
                 placeholder="Confirm password"
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
             </div>
 
-            <button type="submit" disabled={loading} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50">
-              Update Password
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-full bg-primary px-6 py-3 text-xs font-bold text-white shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50"
+              >
+                Update Password
+              </button>
+            </div>
           </form>
         </div>
 
         {/* Activity history logs summary */}
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-          <h3 className="text-xs font-bold uppercase tracking-tight text-foreground/80 mb-4 border-b border-border/30 pb-2">
-            Recent Account Actions
+        <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-md text-left">
+          <h3 className="text-sm font-extrabold uppercase tracking-wide text-foreground mb-5 border-b border-border/40 pb-3 flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            <span>Recent Account Actions</span>
           </h3>
 
-          <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
+          <div className="space-y-3.5 max-h-[260px] overflow-y-auto pr-1">
             {userLogs.map((log, index) => (
-              <div key={index} className="flex gap-2.5 items-start text-xs border-l border-primary/20 pl-3">
+              <div key={index} className="flex gap-3 items-start text-xs border-l-2 border-primary/30 pl-3.5 py-1">
                 <div>
-                  <p className="font-semibold text-foreground">{log.action}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{log.details}</p>
-                  <span className="text-[9px] text-muted-foreground/60">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                  <p className="font-bold text-foreground">{log.action}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5">{log.details}</p>
+                  <span className="text-[10px] text-muted-foreground/70 font-semibold">{new Date(log.createdAt).toLocaleTimeString()}</span>
                 </div>
               </div>
             ))}

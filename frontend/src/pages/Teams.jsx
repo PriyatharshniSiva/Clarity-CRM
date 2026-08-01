@@ -325,9 +325,9 @@ const Teams = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Assign Admin</label>
+                <label className="text-xs font-semibold text-muted-foreground">Assign Team Leader</label>
                 <select name="leaderId" value={formData.leaderId} onChange={handleInputChange}>
-                  <option value="">Select Admin</option>
+                  <option value="">Select Team Leader</option>
                   {availableLeaders.map(leader => (
                     <option key={leader.id} value={leader.id}>{leader.name} ({leader.employeeId})</option>
                   ))}
@@ -368,9 +368,9 @@ const Teams = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Assign Admin</label>
+                <label className="text-xs font-semibold text-muted-foreground">Assign Team Leader</label>
                 <select name="leaderId" value={formData.leaderId} onChange={handleInputChange}>
-                  <option value="">Select Admin</option>
+                  <option value="">Select Team Leader</option>
                   {availableLeaders.map(leader => (
                     <option key={leader.id} value={leader.id}>{leader.name} ({leader.employeeId})</option>
                   ))}
@@ -455,7 +455,7 @@ const Teams = () => {
                 {/* Team Details Header Card */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-xl border border-border/30 bg-muted/20 p-3.5">
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Admin</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Team Leader</p>
                     <div className="flex items-center gap-2.5 mt-2">
                       <img
                         src={teamDetails.leader?.profilePic ? getUploadUrl(teamDetails.leader.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${teamDetails.leader?.name}`}
@@ -533,7 +533,7 @@ const Teams = () => {
                               <p className="text-[9px] text-muted-foreground/80 font-semibold truncate mt-0.5">🎓 {member.user.college}</p>
                             )}
                           </div>
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[8px] font-bold uppercase shrink-0 ${member.user?.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[8px] font-bold uppercase shrink-0 ${member.user?.status === 'ACTIVE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
                             {member.user?.status}
                           </span>
                         </div>
@@ -547,31 +547,31 @@ const Teams = () => {
                         No tasks assigned to this workspace team yet.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto border border-border/30 rounded-xl bg-card">
-                        <table className="w-full text-xs text-left border-collapse">
+                      <div className="w-full min-w-0 overflow-x-auto border border-border/30 rounded-xl bg-card">
+                        <table className="w-full min-w-[700px] text-xs text-left border-collapse">
                           <thead>
-                            <tr className="bg-muted/30 text-muted-foreground font-bold border-b border-border/30 uppercase text-[9px] tracking-wider">
-                              <th className="px-4 py-3">Task ID</th>
-                              <th className="px-4 py-3">Task Name</th>
-                              <th className="px-4 py-3">Priority</th>
-                              <th className="px-4 py-3">Assignee</th>
-                              <th className="px-4 py-3">Deadline</th>
-                              <th className="px-4 py-3 text-right">Status</th>
+                            <tr className="bg-muted/30 text-muted-foreground font-bold border-b border-border/30 uppercase text-[9px] tracking-wider whitespace-nowrap">
+                              <th className="px-4 py-3 whitespace-nowrap">Task ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Task Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Priority</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Assignee</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Deadline</th>
+                              <th className="px-4 py-3 text-right whitespace-nowrap">Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/20 font-medium">
                             {teamDetails.tasks.map((task) => (
-                              <tr key={task.id} className="hover:bg-muted/10 transition-all">
-                                <td className="px-4 py-3 font-mono font-bold text-[10px] text-muted-foreground">
+                              <tr key={task.id} className="hover:bg-muted/10 transition-all whitespace-nowrap">
+                                <td className="px-4 py-3 font-mono font-bold text-[10px] text-muted-foreground whitespace-nowrap">
                                   MRF-{task.id.slice(0, 4).toUpperCase()}
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <div>
-                                    <p className="font-bold text-foreground leading-snug">{task.title}</p>
-                                    <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>
+                                    <p className="font-bold text-foreground leading-snug max-w-xs truncate" title={task.title}>{task.title}</p>
+                                    <p className="text-[10px] text-muted-foreground max-w-xs truncate mt-0.5" title={task.description}>{task.description}</p>
                                   </div>
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <span className={`inline-flex rounded-full px-2 py-0.5 text-[8px] font-bold uppercase ${task.priority === 'URGENT' ? 'bg-red-500/15 text-red-600' :
                                       task.priority === 'HIGH' ? 'bg-orange-500/15 text-orange-600' :
                                         task.priority === 'MEDIUM' ? 'bg-sky-500/15 text-sky-600' :
@@ -580,14 +580,14 @@ const Teams = () => {
                                     {task.priority}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <span className="text-xs text-foreground font-semibold">{task.assignee?.name || 'Unassigned'}</span>
                                 </td>
-                                <td className="px-4 py-3 font-semibold text-muted-foreground">
+                                <td className="px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">
                                   {new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase ${task.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
+                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase ${task.status === 'APPROVED' ? 'bg-primary/10 text-primary' :
                                       task.status === 'WAITING_FOR_REVIEW' ? 'bg-purple-500/10 text-purple-600' :
                                         task.status === 'IN_PROGRESS' ? 'bg-yellow-500/10 text-yellow-600' :
                                           task.status === 'REJECTED' ? 'bg-red-500/10 text-red-600' :

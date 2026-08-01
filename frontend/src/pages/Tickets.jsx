@@ -17,6 +17,8 @@ const Tickets = () => {
   const [tickets, setTickets] = useState([]);
   const [availableAssignees, setAvailableAssignees] = useState([]);
   
+  const [userAssets, setUserAssets] = useState([]);
+  
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -26,7 +28,8 @@ const Tickets = () => {
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
-    category: 'TECHNICAL'
+    category: 'TECHNICAL',
+    assetId: ''
   });
   
   const [editStatus, setEditStatus] = useState('');
@@ -47,6 +50,15 @@ const Tickets = () => {
     }
   };
 
+  const fetchUserAssets = async () => {
+    try {
+      const res = await api.get('/assets');
+      setUserAssets(res.data.assets || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const fetchStaffMembers = async () => {
     try {
       // Only team leaders are assignable (System Admin cannot be assigned ticket work)
@@ -60,6 +72,7 @@ const Tickets = () => {
 
   useEffect(() => {
     fetchTickets();
+    fetchUserAssets();
     if (['ADMIN', 'TEAM_LEADER'].includes(user.role)) {
       fetchStaffMembers();
     }
@@ -119,12 +132,12 @@ const Tickets = () => {
       )}
 
       {/* Header Panel */}
-      <div className="flex items-center justify-between bg-card p-4 rounded-2xl border border-border/40 shadow-premium">
-        <div>
-          <h2 className="text-base font-bold">CRM Support Desk</h2>
-          <p className="text-xs text-muted-foreground">Raise technical, operational, HR, software, or software licensing issues.</p>
+      <div className="glass-card p-5 flex items-center justify-between border border-white/70 dark:border-white/10 shadow-lg">
+        <div className="text-left">
+          <h2 className="text-base font-bold text-foreground">CRM Support Desk</h2>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Raise technical, operational, HR, software, or software licensing issues.</p>
         </div>
-        <button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary-hover">
+        <button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white px-4 py-2 text-xs font-bold shadow-md shadow-primary/20 transition-all">
           <Plus className="h-3.5 w-3.5" />
           <span>Raise Ticket</span>
         </button>
@@ -133,7 +146,7 @@ const Tickets = () => {
       {/* Tickets List */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tickets.length === 0 ? (
-          <div className="col-span-3 text-center py-10 bg-card rounded-2xl border text-muted-foreground text-sm">
+          <div className="col-span-3 text-center py-10 glass-card border border-white/70 dark:border-white/10 text-muted-foreground text-sm">
             No active support tickets found.
           </div>
         ) : (
@@ -141,19 +154,26 @@ const Tickets = () => {
             <div 
               key={ticket.id}
               onClick={() => openDetailModal(ticket)}
-              className="flex flex-col rounded-2xl border border-border/40 bg-card p-5 shadow-premium hover-premium text-left cursor-pointer"
+              className="glass-card p-5 border border-white/70 dark:border-white/10 shadow-lg text-left cursor-pointer hover:border-primary/40"
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[10px] bg-primary/10 text-primary-hover font-bold px-2 py-0.5 rounded-full uppercase tracking-tight">
+                <span className="text-[10px] bg-primary/10 text-primary font-extrabold px-2.5 py-0.5 rounded-full border border-primary/20 uppercase tracking-tight">
                   {ticket.category}
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-yellow-500/10 text-yellow-600'}`}>
+                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase ${ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
                   {ticket.status}
                 </span>
               </div>
 
               <h4 className="text-xs font-bold mt-3 text-foreground line-clamp-1">{ticket.title}</h4>
               <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p>
+
+              {ticket.asset && (
+                <div className="mt-2.5 inline-flex items-center gap-1.5 bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-1 rounded-lg border border-primary/20">
+                  <span>Linked Asset:</span>
+                  <span className="font-mono text-primary">{ticket.asset.name} ({ticket.asset.assetId})</span>
+                </div>
+              )}
 
               <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-3 text-[10px] text-muted-foreground">
                 <span>By: {ticket.creator?.name}</span>
@@ -178,7 +198,7 @@ const Tickets = () => {
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-4">
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold text-left flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
-                <span>Note: Leave/WFH requests must NOT be raised as tickets. Please submit a formal Leave Application Letter in the <strong>Attendance Portal</strong>. Work cannot be assigned to Super Administrators.</span>
+                <span>Note: Leave/WFH requests must NOT be raised as tickets. Please submit a formal Leave Application Letter in the <strong>Attendance Portal</strong>. Work cannot be assigned to Administrators.</span>
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">
@@ -187,10 +207,26 @@ const Tickets = () => {
                   type="text" 
                   name="title"
                   required 
-                  placeholder="e.g. Docker container crash" 
+                  placeholder="e.g. Laptop keyboard failure / monitor display issue" 
                   value={createForm.title} 
                   onChange={handleInputChange} 
                 />
+              </div>
+
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-xs font-semibold text-muted-foreground">Link Assigned Asset (Optional)</label>
+                <select
+                  name="assetId"
+                  value={createForm.assetId}
+                  onChange={handleInputChange}
+                >
+                  <option value="">No Asset Linked</option>
+                  {userAssets.map((ast) => (
+                    <option key={ast.id} value={ast.id}>
+                      {ast.name} ({ast.assetId} - {ast.brand || 'Hardware'})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">

@@ -5,7 +5,7 @@ const { sendNewTicketNotificationEmail, sendTicketUpdateEmail } = require('../se
 
 const createTicket = async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    const { title, description, category, assetId } = req.body;
 
     if (!title || !description || !category) {
       return res.status(400).json({ message: 'Title, description, and category are required.' });
@@ -24,11 +24,13 @@ const createTicket = async (req, res) => {
         title,
         description,
         category,
+        assetId: assetId || null,
         creatorId: req.user.id,
         status: 'OPEN'
       },
       include: {
-        creator: { select: { id: true, name: true, employeeId: true, email: true } }
+        creator: { select: { id: true, name: true, employeeId: true, email: true } },
+        asset: { select: { id: true, assetId: true, name: true, brand: true, model: true } }
       }
     });
 
@@ -88,7 +90,8 @@ const getTickets = async (req, res) => {
       where,
       include: {
         creator: { select: { id: true, name: true, employeeId: true, email: true } },
-        assignee: { select: { id: true, name: true, employeeId: true } }
+        assignee: { select: { id: true, name: true, employeeId: true } },
+        asset: { select: { id: true, assetId: true, name: true, brand: true, model: true } }
       },
       orderBy: { createdAt: 'desc' }
     });

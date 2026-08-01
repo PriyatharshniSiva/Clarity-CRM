@@ -16,10 +16,29 @@ import Attendance from './pages/Attendance';
 import AttendanceAudit from './pages/AttendanceAudit';
 import Tickets from './pages/Tickets';
 import Announcements from './pages/Announcements';
+import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 import AuditLogs from './pages/AuditLogs';
 import SiteSettings from './pages/SiteSettings';
+import AssetManagement from './pages/AssetManagement';
+import Projects from './pages/Projects';
+import WorkLogs from './pages/WorkLogs';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
+import ResourceUtilization from './pages/ResourceUtilization';
+import ExecutiveReports from './pages/ExecutiveReports';
+import AIDashboard from './pages/AIDashboard';
+import AIRecommendations from './pages/AIRecommendations';
+import AIWorkload from './pages/AIWorkload';
+
+import { ThemeProvider } from './context/ThemeContext';
+import SuperAdminDashboard from './pages/super-admin/dashboard/SuperAdminDashboard';
+import BrandingTheme from './pages/super-admin/branding/BrandingTheme';
+import UsersDirectory from './pages/super-admin/users/UsersDirectory';
+import TeamDirectory from './pages/super-admin/teams/TeamDirectory';
+import AdminManagement from './pages/super-admin/admins/AdminManagement';
+
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Protected Route wrapper with Role Check
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -41,23 +60,76 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/" replace />;
   }
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <DashboardLayout>
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+    </DashboardLayout>
+  );
 };
 
 const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <SocketProvider>
-          <Routes>
-            {/* Public Auth Route */}
-            <Route path="/login" element={<Login />} />
+        <ThemeProvider>
+          <SocketProvider>
+            <Routes>
+              {/* Public Auth Route */}
+              <Route path="/login" element={<Login />} />
+
+              {/* Super Admin Platform Control Center Routes */}
+              <Route
+                path="/super-admin"
+                element={<Navigate to="/super-admin/dashboard" replace />}
+              />
+              <Route
+                path="/super-admin/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/branding"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <BrandingTheme />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <UsersDirectory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/teams"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <TeamDirectory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/admins"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <AdminManagement />
+                  </ProtectedRoute>
+                }
+              />
 
             {/* Protected Role-Based Routes */}
             <Route
               path="/"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN']}>
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN']}>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -83,6 +155,14 @@ const App = () => {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <Employees />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'INTERN', 'EMPLOYEE']}>
+                  <Projects />
                 </ProtectedRoute>
               }
             />
@@ -135,6 +215,22 @@ const App = () => {
               }
             />
             <Route
+              path="/chat"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'INTERN', 'EMPLOYEE']}>
+                  <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assets"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'INTERN', 'EMPLOYEE']}>
+                  <AssetManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'INTERN', 'EMPLOYEE']}>
@@ -166,14 +262,71 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/worklogs"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN']}>
+                  <WorkLogs />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
+                  <AnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resource-utilization"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
+                  <ResourceUtilization />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/executive-reports"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
+                  <ExecutiveReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'EMPLOYEE', 'INTERN']}>
+                  <AIDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-recommendations"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'EMPLOYEE', 'INTERN']}>
+                  <AIRecommendations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-workload"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
+                  <AIWorkload />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Catch-all fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SocketProvider>
-      </AuthProvider>
-    </Router>
-  );
+      </ThemeProvider>
+    </AuthProvider>
+  </Router>
+);
 };
 
 export default App;

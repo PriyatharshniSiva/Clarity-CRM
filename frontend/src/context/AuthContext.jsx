@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
         try {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
-          
+
           // Verify token session with fresh profile pull
           const res = await api.get('/auth/profile');
           setUser(res.data);

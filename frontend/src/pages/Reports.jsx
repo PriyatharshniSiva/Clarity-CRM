@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import {
   BarChart3,
@@ -20,27 +20,36 @@ const Reports = () => {
   const [loading, setLoading] = useState(false);
   const [alertMsg, setAlertMsg] = useState('');
 
-  const handleGenerateReport = async (e) => {
-    e.preventDefault();
+  const fetchReport = useCallback(async (type = reportType, start = startDate, end = endDate) => {
     setLoading(true);
     setAlertMsg('');
     setPreviewData([]);
 
     try {
       const params = {};
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
+      if (start) params.startDate = start;
+      if (end) params.endDate = end;
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
 
-      const res = await api.get(`/reports/${reportType}`, { params });
-      setPreviewData(res.data);
+      const res = await api.get(`/reports/${type}`, { params });
+      setPreviewData(res.data || []);
       setLoading(false);
     } catch (err) {
       console.error(err);
       setAlertMsg('Failed to generate report query preview.');
       setLoading(false);
     }
+  }, [reportType, startDate, endDate, statusFilter, priorityFilter]);
+
+  // Auto-fetch data on initial load and whenever Report Category changes
+  useEffect(() => {
+    fetchReport(reportType, startDate, endDate);
+  }, [reportType]);
+
+  const handleGenerateReport = (e) => {
+    e.preventDefault();
+    fetchReport(reportType, startDate, endDate);
   };
 
   const handleDownloadCsv = () => {
@@ -81,7 +90,7 @@ const Reports = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300">
+    <div className="flex-1 flex flex-col space-y-6 text-left animate-in fade-in duration-300">
       {alertMsg && (
         <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 text-primary text-xs font-semibold">
           <span>{alertMsg}</span>
@@ -99,10 +108,7 @@ const Reports = () => {
         <form onSubmit={handleGenerateReport} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div className="flex flex-col gap-1.5 text-left">
             <label className="text-xs font-semibold text-muted-foreground">Report Category</label>
-            <select value={reportType} onChange={(e) => {
-              setReportType(e.target.value);
-              setPreviewData([]);
-            }}>
+            <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
               <option value="attendance">Attendance Reports</option>
               <option value="tasks">Task Allocation Logs</option>
               <option value="teams">Team Performance Audits</option>
@@ -151,10 +157,10 @@ const Reports = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto max-h-96 rounded-xl border">
-            <table className="w-full text-xs text-left border-collapse">
+          <div className="w-full min-w-0 overflow-x-auto max-h-96 rounded-xl border">
+            <table className="w-full min-w-[700px] text-xs text-left border-collapse">
               <thead>
-                <tr className="bg-muted/30 border-b font-bold uppercase text-muted-foreground">
+                <tr className="bg-muted/30 border-b font-bold uppercase text-muted-foreground whitespace-nowrap">
                   {getHeaders().map((header, idx) => (
                     <th key={idx} className="px-4 py-3 whitespace-nowrap">{header}</th>
                   ))}
@@ -162,9 +168,9 @@ const Reports = () => {
               </thead>
               <tbody className="divide-y">
                 {previewData.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-muted/10">
+                  <tr key={idx} className="hover:bg-muted/10 whitespace-nowrap">
                     {getHeaders().map((col, colIdx) => (
-                      <td key={colIdx} className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate">
+                      <td key={colIdx} className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate" title={row[col] === null || row[col] === undefined ? 'N/A' : row[col].toString()}>
                         {row[col] === null || row[col] === undefined ? 'N/A' : row[col].toString()}
                       </td>
                     ))}

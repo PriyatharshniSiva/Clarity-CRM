@@ -1,5 +1,6 @@
 const prisma = require('../utils/db');
 const { logActivity } = require('../utils/activityLogger');
+const { syncAllTeamProjectChats } = require('../services/projectChatService');
 
 const createTeam = async (req, res) => {
   try {
@@ -22,6 +23,8 @@ const createTeam = async (req, res) => {
       },
       include: { leader: true }
     });
+
+    // Note: Team Chat Groups are NOT created for teams without projects per business requirements.
 
     await logActivity({
       userId: req.user.id,
@@ -175,6 +178,9 @@ const editTeam = async (req, res) => {
       include: { leader: true }
     });
 
+    // Sync all project chat rooms for this team
+    await syncAllTeamProjectChats(updatedTeam.id);
+
     await logActivity({
       userId: req.user.id,
       action: 'TEAM_EDIT',
@@ -197,15 +203,21 @@ const deleteTeam = async (req, res) => {
       return res.status(404).json({ message: 'Team not found.' });
     }
 
+    // Archive Team Chat Room instead of destroying communication history
+    await prisma.chatRoom.updateMany({
+      where: { teamId: id },
+      data: { isArchived: true }
+    });
+
     await prisma.team.delete({ where: { id } });
 
     await logActivity({
       userId: req.user.id,
       action: 'TEAM_DELETE',
-      details: `Deleted team: ${team.name}`
+      details: `Deleted team: ${team.name} (Chat room archived)`
     });
 
-    res.json({ message: 'Team deleted successfully.' });
+    res.json({ message: 'Team deleted successfully and team chat archived.' });
   } catch (error) {
     console.error('Delete team error:', error);
     res.status(500).json({ message: 'Failed to delete team.' });
@@ -239,6 +251,9 @@ const assignMembers = async (req, res) => {
           ]
         : [])
     ]);
+
+    // Sync project chat room members for this team
+    await syncAllTeamProjectChats(id);
 
     await logActivity({
       userId: req.user.id,

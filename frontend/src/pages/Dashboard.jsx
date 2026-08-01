@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
+import UserAvatar from '../components/common/UserAvatar';
 import {
   Users,
   Briefcase,
@@ -20,7 +22,17 @@ import {
   FileText,
   User as UserIcon,
   UserCheck,
-  Award
+  Award,
+  MessageSquare,
+  Search,
+  Bell,
+  Settings,
+  Megaphone,
+  Sparkles,
+  ChevronRight,
+  ShieldAlert,
+  Laptop,
+  Plus
 } from 'lucide-react';
 import {
   BarChart,
@@ -30,17 +42,61 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   LineChart,
-  Line
+  Line,
+  Cell,
+  ReferenceLine,
+  AreaChart,
+  Area
 } from 'recharts';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.25, ease: 'easeOut' }
+  }
+};
+
+// Helper for mini week strip date calculation
+const getWeekDays = () => {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 is Sun, 1 is Mon
+  const distanceToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + distanceToMon);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push({
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      dateNum: d.getDate(),
+      isToday: d.toDateString() === today.toDateString(),
+      fullDate: d
+    });
+  }
+  return days;
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { onlineUsers } = useSocket();
+  const { onlineUsers, notifications } = useSocket();
 
+  const [timeFilter, setTimeFilter] = useState('1Y');
+  const [activitySearch, setActivitySearch] = useState('');
   const [stats, setStats] = useState({
     totalMembers: 0,
     totalInterns: 0,
@@ -63,23 +119,28 @@ const Dashboard = () => {
   const [burndownChartData, setBurndownChartData] = useState([]);
   const [sprintStats, setSprintStats] = useState({ totalPoints: 0, completedPoints: 0, pendingPoints: 0 });
   const [allTasks, setAllTasks] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [recentChatRooms, setRecentChatRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Intern Clock-in/out Dashboard Widget state
+  // Intern Clock-in/out state
   const [time, setTime] = useState(new Date());
   const [clockedRecord, setClockedRecord] = useState(null);
   const [attendanceAlert, setAttendanceAlert] = useState('');
   const [clockLoading, setClockLoading] = useState(false);
+
+  const weekDays = getWeekDays();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Fetch dashboard components in parallel
         const promises = [
           api.get('/tasks'),
-          api.get('/tickets')
+          api.get('/tickets'),
+          api.get('/announcements'),
+          api.get('/chat/rooms')
         ];
 
         if (user.role === 'ADMIN') {
@@ -89,11 +150,22 @@ const Dashboard = () => {
           promises.push(api.get('/logs?limit=8'));
         }
 
-        const results = await Promise.all(promises.map(p => p.catch(e => ({ error: true, data: null }))));
+        const results = await Promise.all(promises.map(p => p.catch(() => ({ error: true, data: null }))));
 
         const tasksData = results[0].data || [];
         setAllTasks(tasksData);
         const ticketsData = results[1].data || [];
+        const announcementsData = results[2].data || [];
+        setAnnouncements(announcementsData.slice(0, 4));
+        const assetsData = results[3].data || {};
+        setAssetStats({
+          totalAssets: assetsData.totalAssets || 0,
+          availableAssets: assetsData.availableAssets || 0,
+          assignedAssets: assetsData.assignedAssets || 0,
+          maintenanceAssets: assetsData.maintenanceAssets || 0
+        });
+        const chatRoomsData = results[4].data || [];
+        setRecentChatRooms(chatRoomsData);
 
         let newStats = { ...stats };
         
@@ -110,10 +182,10 @@ const Dashboard = () => {
         newStats.closedTickets = closedT;
 
         if (user.role === 'ADMIN') {
-          const attendanceData = results[2].data || {};
-          const teamsData = results[3].data || [];
-          const usersData = results[4].data?.users || [];
-          const logsData = results[5].data?.logs || [];
+          const attendanceData = results[3].data || {};
+          const teamsData = results[4].data || [];
+          const usersData = results[5].data?.users || [];
+          const logsData = results[6].data?.logs || [];
 
           newStats.totalMembers = usersData.filter(u => u.role === 'INTERN' || u.role === 'EMPLOYEE').length;
           newStats.totalInterns = newStats.totalMembers;
@@ -124,7 +196,6 @@ const Dashboard = () => {
           newStats.lateToday = attendanceData.lateToday || 0;
           newStats.halfDayToday = attendanceData.halfDayToday || 0;
 
-          // Attendance rate calculation
           const totalActiveMembers = newStats.totalMembers;
           if (totalActiveMembers > 0) {
             const attending = newStats.presentToday + newStats.lateToday + newStats.halfDayToday;
@@ -148,7 +219,6 @@ const Dashboard = () => {
             { name: 'Rejected', value: tasksData.filter(t => t.status === 'REJECTED').length }
           ]);
 
-          // Sprint Burndown Curve Calculation
           const totalPoints = tasksData.reduce((acc, t) => acc + (t.storyPoints || 0), 0);
           const completedPoints = tasksData.filter(t => t.status === 'APPROVED').reduce((acc, t) => acc + (t.storyPoints || 0), 0);
           setSprintStats({
@@ -177,7 +247,6 @@ const Dashboard = () => {
           });
           setBurndownChartData(burndown);
         } else {
-          // Fallback simple task distribution for leaders/interns
           setTaskChartData([
             { name: 'Open Tasks', value: pending },
             { name: 'Completed', value: completed }
@@ -195,7 +264,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
 
-  // Handle ticking timer and clock status fetches for Interns, Employees and Team Leaders
   useEffect(() => {
     if (user && (user.role === 'INTERN' || user.role === 'EMPLOYEE' || user.role === 'TEAM_LEADER')) {
       const timer = setInterval(() => setTime(new Date()), 1000);
@@ -270,142 +338,128 @@ const Dashboard = () => {
     }
   };
 
-  const COLORS = ['#0F5A46', '#17A673', '#10B981', '#F59E0B', '#EF4444'];
-
-  const adminStatsWidgets = [
-    { label: 'Total Members', value: stats.totalMembers || stats.totalInterns, icon: Users, color: 'text-[#0F5A46] bg-[#0F5A46]/10' },
-    { label: 'Admins', value: stats.totalLeaders, icon: Briefcase, color: 'text-[#17A673] bg-[#17A673]/10' },
-    { label: 'Active Teams', value: stats.totalTeams, icon: Briefcase, color: 'text-[#1F3A36] bg-[#1F3A36]/10' },
-    { label: 'Present Today', value: stats.presentToday, icon: UserCheck, color: 'text-emerald-600 bg-emerald-600/10' },
-    { label: 'Late Clock-Ins', value: stats.lateToday, icon: Clock, color: 'text-amber-600 bg-amber-600/10' },
-    { label: 'Open Tickets', value: stats.openTickets, icon: AlertCircle, color: 'text-rose-600 bg-rose-600/10' }
-  ];
-
-  const internStatsWidgets = [
-    { label: 'My Open Tasks', value: stats.pendingTasks, icon: Briefcase, color: 'text-[#0F5A46] bg-[#0F5A46]/10' },
-    { label: 'Completed Tasks', value: stats.completedTasks, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-600/10' },
-    { label: 'My Open Tickets', value: stats.openTickets, icon: AlertCircle, color: 'text-rose-600 bg-rose-600/10' },
-    { label: 'Attendance Rate', value: `${stats.attendanceRate}%`, icon: Clock, color: 'text-amber-600 bg-amber-600/10' }
-  ];
-
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="skeleton h-28 w-full" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <div className="skeleton h-80 lg:col-span-2" />
-          <div className="skeleton h-80" />
+      <div className="space-y-6 p-2">
+        <div className="skeleton h-16 w-full rounded-[24px]" />
+        <div className="skeleton h-32 w-full rounded-[24px]" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="skeleton h-96 lg:col-span-2 rounded-[24px]" />
+          <div className="skeleton h-96 rounded-[24px]" />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      
-      {/* Welcome Banner */}
-      <div className="relative rounded-2xl bg-gradient-to-r from-[#0F5A46]/10 to-[#17A673]/10 border border-primary/10 p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left">
-        <div>
-          <h2 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight">Welcome back, {user?.name}!</h2>
-          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            {user.role === 'ADMIN' && 'Access real-time system presence, geofenced records, and task metrics.'}
-            {user.role === 'TEAM_LEADER' && 'Review active workspaces sprint velocities, pending requests, and project branches.'}
-            {(user.role === 'INTERN' || user.role === 'EMPLOYEE') && 'Check assigned cards, branch allocations, and submit clock-in logs.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/10 text-emerald-600 px-3 py-1.5 rounded-full font-bold">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>Active Session</span>
-          </span>
-        </div>
-      </div>
+  // Calculate average for bar chart reference line
+  const avgChartValue = taskChartData.length > 0 
+    ? Math.round(taskChartData.reduce((acc, curr) => acc + curr.value, 0) / taskChartData.length)
+    : 0;
 
-      {/* Attendance Clock-in/out Quick Portal */}
-      {user && (user.role === 'INTERN' || user.role === 'EMPLOYEE' || user.role === 'TEAM_LEADER') && (
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold">Attendance Clock Portal</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Clock your daily shift hours. Ensures geolocation validations are processed.</p>
-              </div>
+  const showClockFirst = user && (user.role === 'EMPLOYEE' || user.role === 'INTERN' || user.role === 'TEAM_LEADER');
+  const showClockPortal = user && (user.role === 'INTERN' || user.role === 'EMPLOYEE' || user.role === 'TEAM_LEADER');
+
+  const renderAttendanceClockPortal = () => {
+    if (!showClockPortal) return null;
+    const isClockedIn = clockedRecord && !clockedRecord.clockOut;
+    const isCompleted = clockedRecord && clockedRecord.clockOut;
+    const isCompact = showClockFirst && (isClockedIn || isCompleted);
+
+    return (
+      <motion.div variants={itemVariants} className={`clean-card text-left ${isCompact ? 'p-4 space-y-2.5' : 'space-y-4'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`rounded-2xl bg-primary/10 text-primary border border-primary/20 ${isCompact ? 'p-2.5' : 'p-3'}`}>
+              <Clock className={isCompact ? 'h-4 w-4' : 'h-5 w-5'} />
             </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-xl font-bold font-mono">
-                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
-              <span className="text-xs text-muted-foreground block font-semibold mt-0.5">
-                {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-              </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className={`font-bold text-foreground ${isCompact ? 'text-sm' : 'text-base'}`}>Attendance Clock Portal</h3>
+                {isCompact && (
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
+                    isCompleted
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : 'bg-primary text-white border-primary-hover shadow-2xs'
+                  }`}>
+                    {isCompleted ? 'Shift Completed' : 'Checked In / Active'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isCompact ? 'Active shift logged with geolocation validation.' : 'Clock your shift hours. Ensures geolocation validations are processed.'}
+              </p>
             </div>
           </div>
 
-          {clockedRecord && clockedRecord.status === 'LATE' && (
-            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 text-amber-500 animate-bounce" />
-              <span>Late Clock-In Notice: You clocked in past shift start time (09:30 AM). Your attendance today is marked as <strong>LATE</strong>.</span>
+          <div className="flex items-center gap-4 shrink-0 sm:self-center">
+            <div className="text-right">
+              <span className={`font-black font-mono tracking-tight text-primary block ${isCompact ? 'text-lg' : 'text-2xl'}`}>
+                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground block font-semibold">
+                {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
             </div>
-          )}
 
-          {attendanceAlert && (
-            <div className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
-              attendanceAlert.includes('failed') || attendanceAlert.includes('Outside') || attendanceAlert.includes('coordinates') || attendanceAlert.includes('denied')
-                ? 'border-red-500/20 bg-red-500/5 text-red-500' 
-                : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400'
-            }`}>
-              <span>{attendanceAlert}</span>
-              <button onClick={() => setAttendanceAlert('')} className="font-bold ml-2">✕</button>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/30 pt-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Today's Status</span>
-              <div className="flex items-center gap-2">
-                {!clockedRecord ? (
-                  <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full font-extrabold text-muted-foreground">Not Checked In</span>
-                ) : clockedRecord.clockOut ? (
-                  <span className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-extrabold">Shift Completed</span>
+            {/* Compact Action Buttons */}
+            {isCompact && (
+              <div className="ml-2">
+                {isClockedIn ? (
+                  <button
+                    onClick={handleClockOut}
+                    disabled={clockLoading}
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white px-4 py-2 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Square className="h-3.5 w-3.5 fill-current" />
+                    <span>Clock Out</span>
+                  </button>
                 ) : (
-                  <span className="text-xs bg-blue-500/10 text-blue-600 px-2.5 py-0.5 rounded-full font-extrabold">Checked In / Active</span>
-                )}
-              </div>
-            </div>
-
-            {clockedRecord && (
-              <div className="flex gap-6">
-                <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Clock In</span>
-                  <span className="text-xs font-semibold font-mono">
-                    {new Date(clockedRecord.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-                {clockedRecord.clockOut && (
-                  <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Clock Out</span>
-                    <span className="text-xs font-semibold font-mono">
-                      {new Date(clockedRecord.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div className="text-xs text-muted-foreground font-bold flex items-center gap-1 bg-primary/10 border border-primary/20 px-3.5 py-1.5 rounded-full">
+                    <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                    <span>Logged</span>
                   </div>
                 )}
               </div>
             )}
+          </div>
+        </div>
+
+        {clockedRecord && clockedRecord.status === 'LATE' && (
+          <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>Late Clock-In Notice: Marked as <strong>LATE</strong> (past 09:30 AM).</span>
+          </div>
+        )}
+
+        {attendanceAlert && (
+          <div className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
+            attendanceAlert.includes('failed') || attendanceAlert.includes('denied')
+              ? 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+              : 'bg-primary/10 border-primary/20 text-primary'
+          }`}>
+            <span>{attendanceAlert}</span>
+          </div>
+        )}
+
+        {!isCompact && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-border/30">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-semibold">Status:</span>
+              {!clockedRecord ? (
+                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold">Not Clocked In</span>
+              ) : clockedRecord.clockOut ? (
+                <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-extrabold border border-primary/20">Shift Completed</span>
+              ) : (
+                <span className="text-xs bg-primary text-white px-3 py-1 rounded-full font-extrabold shadow-sm">Checked In / Active</span>
+              )}
+            </div>
 
             <div className="flex items-center gap-3">
               {!clockedRecord ? (
                 <button
                   onClick={handleClockIn}
                   disabled={clockLoading}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Play className="h-4 w-4 fill-current" />
                   <span>Clock In</span>
@@ -414,91 +468,393 @@ const Dashboard = () => {
                 <button
                   onClick={handleClockOut}
                   disabled={clockLoading}
-                  className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-rose-600/25 transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                   <span>Clock Out</span>
                 </button>
               ) : (
-                <div className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border p-2.5 rounded-xl">
-                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                <div className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full">
+                  <CheckCircle className="h-4 w-4 text-primary" />
                   <span>Attendance Logged</span>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </motion.div>
+    );
+  };
 
-      {/* Numeric Statistics widgets grids */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {(user.role === 'ADMIN' ? adminStatsWidgets : internStatsWidgets).map((widget, i) => {
-          const Icon = widget.icon;
-          return (
-            <div key={i} className="rounded-2xl border border-border/40 bg-card p-5 shadow-premium hover-premium text-left">
+  return (
+    <motion.div 
+      className="space-y-6 pb-8"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* 1. Page Header — Clean SaaS Pattern */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 pb-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+            Dashboard Overview
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
+            Real-time analytics for workforce attendance, sprint tasks, and system activities.
+          </p>
+        </div>
+
+        {['ADMIN', 'SUPER_ADMIN', 'TEAM_LEADER'].includes(user?.role) && (
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-bold px-5 py-2.5 rounded-full text-xs shadow-md shadow-primary/25 transition-all active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Task</span>
+            </Link>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Position #1 for Employee, Intern & Team Leader: Attendance Clock Portal */}
+      {showClockFirst && renderAttendanceClockPortal()}
+
+      {/* 2. Stat Strip Card — Single Wide Card with Dividers (Clean SaaS Style) */}
+      <motion.div variants={itemVariants} className="stat-card">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/30">
+          {/* Stat Group 1 */}
+          <div className="py-3 sm:py-0 sm:px-6 first:pl-0 last:pr-0 text-left space-y-1">
+            <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block">
+              Total Workforce
+            </span>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-3xl font-black tracking-tight text-foreground">
+                {stats.totalMembers || stats.totalInterns}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                +12% vs last mo
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/80 font-medium">Active intern & employee roster</p>
+          </div>
+
+          {/* Stat Group 2 */}
+          <div className="py-3 sm:py-0 sm:px-6 last:pr-0 text-left space-y-1">
+            <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block">
+              Present Today
+            </span>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-3xl font-black tracking-tight text-foreground">
+                {stats.presentToday}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {stats.attendanceRate}% turnout
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/80 font-medium">Logged shift check-ins today</p>
+          </div>
+
+          {/* Stat Group 3 */}
+          <div className="py-3 sm:py-0 sm:px-6 last:pr-0 text-left space-y-1">
+            <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block">
+              Active Deliverables
+            </span>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-3xl font-black tracking-tight text-foreground">
+                {stats.pendingTasks}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {stats.completedTasks} completed
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/80 font-medium">In-flight sprint issues</p>
+          </div>
+
+          {/* Stat Group 4 */}
+          <div className="py-3 sm:py-0 sm:px-6 last:pr-0 text-left space-y-1">
+            <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block">
+              Open Support Tickets
+            </span>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-3xl font-black tracking-tight text-foreground">
+                {stats.openTickets}
+              </span>
+              {stats.openTickets > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                  Needs attention
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  All clear
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground/80 font-medium">Queries pending resolution</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 2.5. Activity Assigned Card — Clean SaaS Pattern */}
+      <motion.div variants={itemVariants} className="clean-card text-left space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-foreground">Activity Assigned</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">Your current workforce time and activity allocation.</p>
+          </div>
+
+          {/* Search Input Box top-right */}
+          <div className="relative shrink-0 w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={activitySearch}
+              onChange={(e) => setActivitySearch(e.target.value)}
+              className="w-full bg-muted/30 border border-border/40 rounded-full px-4 py-2 text-xs pr-10 focus:ring-2 focus:ring-primary/20"
+            />
+            <Search className="absolute right-3.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-1">
+          {/* Column 1: Featured Task Activity */}
+          <div className="p-5 rounded-2xl bg-primary/5 border border-border/40 flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">Task</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                △ 14.13%
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-4xl sm:text-5xl font-black text-foreground tracking-tight">
+                {Math.round((stats.completedTasks / ((stats.pendingTasks + stats.completedTasks) || 1)) * 100)}%
+              </span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[10px] text-muted-foreground font-mono font-semibold">23, Jan-Mar</span>
+                <svg className="w-20 h-6 text-primary stroke-current fill-none stroke-[2]" viewBox="0 0 80 24">
+                  <path d="M 0 20 Q 20 18, 40 10 T 80 4" />
+                  <circle cx="80" cy="4" r="2.5" className="fill-primary" />
+                </svg>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed pt-2 border-t border-border/30">
+              You've been completing a lot of sprint deliverables lately, which is having a positive impact on your productivity!
+            </p>
+          </div>
+
+          {/* Column 2: 2 Stacked Items (Meeting & Call equivalent) */}
+          <div className="grid grid-rows-2 gap-4">
+            {/* Top Item */}
+            <div className="p-4 rounded-2xl bg-card border border-border/30 flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{widget.label}</span>
-                <div className={`rounded-xl p-2.5 ${widget.color}`}>
-                  <Icon className="h-5 w-5" />
+                <span className="text-xs font-bold text-muted-foreground">Meeting & Standups</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  △ 2.32%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-foreground">{stats.attendanceRate}%</span>
+                <svg className="w-16 h-5 text-primary stroke-current fill-none stroke-[2]" viewBox="0 0 80 24">
+                  <path d="M 0 18 Q 30 15, 50 8 T 80 4" />
+                  <circle cx="80" cy="4" r="2.5" className="fill-primary" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Bottom Item */}
+            <div className="p-4 rounded-2xl bg-card border border-border/30 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground">Support & Tickets</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  △ 9.23%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-foreground">
+                  {Math.round((stats.openTickets / ((stats.openTickets + stats.closedTickets) || 1)) * 100)}%
+                </span>
+                <svg className="w-16 h-5 text-primary stroke-current fill-none stroke-[2]" viewBox="0 0 80 24">
+                  <path d="M 0 16 Q 25 12, 55 6 T 80 3" />
+                  <circle cx="80" cy="3" r="2.5" className="fill-primary" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 3: 2 Stacked Items (Email & Note equivalent) */}
+          <div className="grid grid-rows-2 gap-4">
+            {/* Top Item */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-emerald-950/10 border border-emerald-900/10 dark:border-emerald-800/20 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground">Audit & System Logs</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                  ▽ 17.12%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-foreground">8%</span>
+                <svg className="w-16 h-5 text-rose-500 stroke-current fill-none stroke-[2]" viewBox="0 0 80 24">
+                  <path d="M 0 4 Q 30 8, 50 16 T 80 20" />
+                  <circle cx="80" cy="20" r="2.5" className="fill-rose-500" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Bottom Item */}
+            <div className="p-4 rounded-2xl bg-card border border-border/30 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground">Task Completion</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  △ 7.41%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-foreground">
+                  {Math.round((stats.completedTasks / ((stats.completedTasks + stats.pendingTasks) || 1)) * 100)}%
+                </span>
+                <svg className="w-16 h-5 text-primary stroke-current fill-none stroke-[2]" viewBox="0 0 80 24">
+                  <path d="M 0 18 Q 20 14, 50 8 T 80 2" />
+                  <circle cx="80" cy="2" r="2.5" className="fill-primary" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 3. Attendance Clock Portal */}
+      {!showClockFirst && renderAttendanceClockPortal()}
+
+      {/* 4. Two-Column Card Row (Chart Card Left + Schedule/List Card Right) */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+        
+        {/* Left Column: Smooth Area Chart matching reference screenshot with Real CRM Data */}
+        <div className="clean-card lg:col-span-2 text-left space-y-6">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                  <span>Task Velocity & Deliverables</span>
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+                    {allTasks.length || (stats.pendingTasks + stats.completedTasks)} <span className="text-sm font-semibold text-muted-foreground">Tasks</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {stats.completedTasks} completed ({Math.round((stats.completedTasks / ((stats.pendingTasks + stats.completedTasks) || 1)) * 100)}%)
+                  </span>
                 </div>
               </div>
-              <p className="mt-4 text-[26px] font-extrabold tracking-tight leading-none">{widget.value}</p>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Dynamic Graph Analytics panels */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recharts allocations chart area */}
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium lg:col-span-2 space-y-6 text-left">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Task Allocations Analysis</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Overall distribution of sprint issues across project columns.</p>
-            <div className="h-64 w-full mt-6">
+              {/* Time Range Filter Selector (1D, 1W, 1M, 3M, 1Y, ALL) */}
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40 text-xs font-semibold">
+                {['1D', '1W', '1M', '3M', '1Y', 'ALL'].map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setTimeFilter(range)}
+                    className={`px-3 py-1 rounded-lg transition-all ${
+                      timeFilter === range
+                        ? 'bg-primary text-white font-bold shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recharts AreaChart with real CRM task data */}
+            <div className="h-72 w-full mt-6">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={taskChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(var(--border), 0.3)" />
-                  <XAxis dataKey="name" stroke="rgb(var(--muted-foreground))" fontSize={11} tickLine={false} />
-                  <YAxis stroke="rgb(var(--muted-foreground))" fontSize={11} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgb(var(--card))', border: '1px solid rgba(var(--border), 0.5)' }} 
-                    labelStyle={{ color: 'rgb(var(--foreground))', fontWeight: 'bold' }}
+                <AreaChart 
+                  data={
+                    taskChartData && taskChartData.length > 0 
+                      ? taskChartData.map(item => ({ label: item.name || item.label, value: item.value || 0 }))
+                      : [
+                          { label: 'Pending', value: stats.pendingTasks },
+                          { label: 'Completed', value: stats.completedTasks }
+                        ]
+                  } 
+                  margin={{ top: 15, right: 10, left: -15, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="areaColorGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(226, 234, 230, 0.5)" />
+                  <XAxis 
+                    dataKey="label" 
+                    stroke="currentColor" 
+                    className="text-xs font-medium text-muted-foreground" 
+                    tickLine={false} 
+                    axisLine={false} 
                   />
-                  <Bar dataKey="value" fill="#2563EB" radius={[8, 8, 0, 0]}>
-                    {taskChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <YAxis 
+                    stroke="currentColor" 
+                    className="text-xs font-medium text-muted-foreground" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    allowDecimals={false}
+                    tickFormatter={(val) => Math.round(val)} 
+                  />
+                  <Tooltip 
+                    cursor={{ stroke: '#64748B', strokeWidth: 1, strokeDasharray: '3 3' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const dataPoint = payload[0].payload;
+                        return (
+                          <div className="bg-[#0B1528] text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/60 min-w-[130px] text-left">
+                            <p className="text-[11px] font-medium text-slate-400 font-sans">{dataPoint.label} Status</p>
+                            <p className="text-lg font-black text-primary font-mono mt-0.5">{dataPoint.value} <span className="text-xs text-slate-300 font-normal">tasks</span></p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="var(--primary)" 
+                    strokeWidth={2.5} 
+                    fillOpacity={1} 
+                    fill="url(#areaColorGradient)" 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Admin sprint details and burndown curve chart */}
+          {/* Active Sprint Burndown Curve for Admin */}
           {user.role === 'ADMIN' && burndownChartData.length > 0 && (
-            <div className="border-t border-border/20 pt-6">
+            <div className="border-t border-border/30 pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Active Sprint Burndown</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Ideal vs. remaining velocity progression metrics.</p>
+                  <h4 className="text-sm font-bold text-foreground">Active Sprint Burndown</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">Ideal vs. remaining story point velocity.</p>
                 </div>
-                <span className="text-[10px] bg-blue-500/10 text-blue-600 px-3 py-1 rounded font-mono font-bold">
+                <span className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-mono font-bold border border-primary/20">
                   {sprintStats.totalPoints} SP Total
                 </span>
               </div>
-              <div className="h-56 w-full mt-4">
+              <div className="h-44 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={burndownChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(var(--border), 0.3)" />
-                    <XAxis dataKey="name" stroke="rgb(var(--muted-foreground))" fontSize={10} tickLine={false} />
-                    <YAxis stroke="rgb(var(--muted-foreground))" fontSize={10} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(226, 234, 230, 0.6)" />
+                    <XAxis dataKey="name" stroke="currentColor" className="text-xs font-semibold text-muted-foreground" tickLine={false} />
+                    <YAxis stroke="currentColor" className="text-xs font-semibold text-muted-foreground" tickLine={false} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: 'rgb(var(--card))', border: '1px solid rgba(var(--border), 0.5)' }} 
-                      labelStyle={{ color: 'rgb(var(--foreground))', fontWeight: 'bold' }}
+                      contentStyle={{ backgroundColor: '#0B1528', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' }} 
+                      labelStyle={{ color: 'var(--primary)', fontWeight: 'bold' }}
                     />
-                    <Line type="monotone" dataKey="Ideal" stroke="#a78bfa" strokeDasharray="5 5" strokeWidth={2} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="Remaining" stroke="#2563EB" strokeWidth={3} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="Ideal" stroke="#94A3B8" strokeDasharray="5 5" strokeWidth={2} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="Remaining" stroke="var(--primary)" strokeWidth={3} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -506,186 +862,246 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Sidebar details (1/3 width right column) */}
-        <div className="space-y-6 text-left">
-          
-          {/* Quick Actions Panel */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 shadow-premium space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick CRM Actions</h3>
-            <div className="grid grid-cols-1 gap-2.5">
-              {(user.role === 'INTERN' || user.role === 'EMPLOYEE' || user.role === 'TEAM_LEADER') && (
-                <>
-                  <Link to="/attendance?tab=Leaves" className="flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border/40 p-3 rounded-xl transition-all">
-                    <Clock className="h-4.5 w-4.5 text-[#0F5A46]" />
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">Apply Leave / WFH</h4>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Submit leave dates for approval.</p>
-                    </div>
-                  </Link>
-                  <Link to="/tickets" className="flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border/40 p-3 rounded-xl transition-all">
-                    <AlertCircle className="h-4.5 w-4.5 text-rose-600" />
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">Create Support Ticket</h4>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Request hardware or query access.</p>
-                    </div>
-                  </Link>
-                </>
-              )}
-              {user.role === 'ADMIN' && (
-                <>
-                  <Link to="/interns" className="flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border/40 p-3 rounded-xl transition-all">
-                    <Users className="h-4.5 w-4.5 text-[#0F5A46]" />
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">Register New Intern</h4>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Add details & credentials.</p>
-                    </div>
-                  </Link>
-                  <Link to="/teams" className="flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border/40 p-3 rounded-xl transition-all">
-                    <Briefcase className="h-4.5 w-4.5 text-emerald-600" />
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">Create Project Team</h4>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Map developers & leaders.</p>
-                    </div>
-                  </Link>
-                </>
-              )}
-              <Link to="/profile" className="flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border/40 p-3 rounded-xl transition-all">
-                <UserIcon className="h-4.5 w-4.5 text-[#17A673]" />
+        {/* Right Column: Common Chat Mini Widget + Schedule & Deliverables Card */}
+        <div className="space-y-6">
+          {/* 1. Common Chat Widget */}
+          <div className="clean-card text-left space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                  <MessageSquare className="h-4.5 w-4.5" />
+                </div>
                 <div>
-                  <h4 className="text-xs font-bold text-foreground">Change Password</h4>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Update authentication parameters.</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Leave Balance widget */}
-          {(user.role === 'INTERN' || user.role === 'EMPLOYEE') && (
-            <div className="rounded-2xl border border-border/40 bg-card p-5 shadow-premium text-left space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">My Leave Balances</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-muted/40 p-3.5 rounded-xl border">
-                  <span className="text-[10px] font-bold text-muted-foreground block">CASUAL LEAVES</span>
-                  <span className="text-[20px] font-extrabold text-foreground mt-1 block">12 Days</span>
-                </div>
-                <div className="bg-muted/40 p-3.5 rounded-xl border">
-                  <span className="text-[10px] font-bold text-muted-foreground block">WFH ALLOCATION</span>
-                  <span className="text-[20px] font-extrabold text-foreground mt-1 block">8 Days</span>
+                  <h3 className="text-sm font-extrabold text-foreground">Common Chat</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold">Real-time team messaging</p>
                 </div>
               </div>
+              <Link
+                to="/chat"
+                className="text-xs font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 transition-all hover:bg-primary/20"
+              >
+                <span>Open Chat</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-          )}
 
-          {/* Upcoming Meetings timeline card */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 shadow-premium text-left space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-bold">Upcoming Work Events</h3>
-            <div className="space-y-3">
-              {[
-                { time: 'Today, 03:00 PM', desc: 'Sprint retro retrospective', type: 'Sprint Retro' },
-                { time: 'Mon, 10:00 AM', desc: 'Daily Scrum standup meeting', type: 'Scrum Standup' }
-              ].map((ev, idx) => (
-                <div key={idx} className="flex flex-col gap-1 border-b border-border/20 pb-3 last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] bg-[#0F5A46]/10 text-[#0F5A46] px-2 py-0.5 rounded font-extrabold uppercase shrink-0">{ev.type}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono font-semibold">{ev.time}</span>
-                  </div>
-                  <p className="text-xs text-foreground font-semibold mt-1">{ev.desc}</p>
-                </div>
-              ))}
+            {/* Quick Room Snippets */}
+            <div className="space-y-2 pt-1">
+              {recentChatRooms.length === 0 ? (
+                <p className="text-xs text-muted-foreground font-semibold py-2">No active chat rooms.</p>
+              ) : (
+                recentChatRooms.slice(0, 3).map(r => (
+                  <Link
+                    key={r.id}
+                    to={`/chat?room=${r.id}`}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-border/30 hover:border-primary/40 transition-all"
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className="h-7 w-7 rounded-lg bg-primary text-white font-bold flex items-center justify-center text-[10px]">
+                        {r.name?.charAt(0) || 'C'}
+                      </div>
+                      <div className="truncate text-left">
+                        <p className="text-xs font-bold text-foreground truncate">{r.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate font-medium">{r.lastMessage ? r.lastMessage.text : 'Click to chat'}</p>
+                      </div>
+                    </div>
+                    {r.unreadCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black shrink-0">
+                        {r.unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Presence check */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 shadow-premium text-left">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Workspace Presence</h3>
-            <div className="space-y-3 overflow-y-auto max-h-56 pr-2">
-              {onlineUsers.length === 0 ? (
-                <p className="text-xs text-center text-muted-foreground py-8">No online users</p>
-              ) : (
-                onlineUsers.slice(0, 5).map((onlineUser) => (
-                  <div key={onlineUser.id || onlineUser} className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="h-8 w-8 rounded-lg bg-[#17A673]/10 text-[#17A673] flex items-center justify-center font-bold text-xs uppercase">
-                        {(onlineUser.name || 'U').substring(0, 2)}
+          {/* 2. Schedule & Deliverables Card */}
+          <div className="clean-card text-left space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-foreground">Schedule & Deliverables</h3>
+            <span className="text-[11px] font-extrabold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
+              This Week
+            </span>
+          </div>
+
+          {/* Mini Week-Strip Date Selector */}
+          <div className="grid grid-cols-7 gap-1 text-center py-2 bg-card rounded-2xl p-2 border border-border/40">
+            {weekDays.map((wd, i) => (
+              <div 
+                key={i} 
+                className={`py-2 px-1 rounded-xl transition-all ${
+                  wd.isToday 
+                    ? 'bg-primary text-white font-extrabold shadow-md shadow-primary/25 scale-105' 
+                    : 'hover:bg-muted text-muted-foreground font-semibold'
+                }`}
+              >
+                <span className="text-[10px] block uppercase">{wd.dayName}</span>
+                <span className="text-sm font-bold block mt-0.5">{wd.dateNum}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* "Today" Section with Colored Left-Accent List Items */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+                Today's Queue
+              </span>
+              {allTasks.length > 0 && (
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                  {allTasks.length} {allTasks.length === 1 ? 'Task' : 'Tasks'} Today
+                </span>
+              )}
+            </div>
+
+            <div className="max-h-[82px] overflow-y-auto space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-emerald-500/30 scrollbar-track-transparent scroll-smooth snap-y snap-mandatory">
+              {allTasks.length > 0 ? (
+                [...allTasks]
+                  .sort((a, b) => {
+                    const statusOrder = {
+                      IN_PROGRESS: 1,
+                      WAITING_FOR_REVIEW: 2,
+                      PENDING: 3,
+                      TODO: 4,
+                      COMPLETED: 5
+                    };
+                    const orderA = statusOrder[a.status] || 99;
+                    const orderB = statusOrder[b.status] || 99;
+                    if (orderA !== orderB) return orderA - orderB;
+                    return new Date(a.deadline || a.dueDate || 0) - new Date(b.deadline || b.dueDate || 0);
+                  })
+                  .map((task, idx) => {
+                    // Tonal green left accents (Deep green, Mid green, Pale mint)
+                    const accentStyles = [
+                      'border-l-4 border-primary bg-primary/5 text-foreground',
+                      'border-l-4 border-primary/70 bg-primary/5 text-foreground',
+                      'border-l-4 border-primary/40 bg-primary/5 text-foreground'
+                    ];
+                    const chipStyles = [
+                      'bg-primary text-white',
+                      'bg-primary/20 text-primary',
+                      'bg-primary/10 text-primary'
+                    ];
+
+                    const accentClass = accentStyles[idx % accentStyles.length];
+                    const chipClass = chipStyles[idx % chipStyles.length];
+
+                    return (
+                      <div 
+                        key={task.id} 
+                        className={`p-3.5 rounded-r-2xl rounded-l-md border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0 min-h-[72px] transition-all hover:shadow-sm ${accentClass}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-xl shrink-0 ${chipClass}`}>
+                            <Briefcase className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold line-clamp-1">{task.title}</h4>
+                            <span className="text-[10px] opacity-80 font-medium block mt-0.5">
+                              Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Today'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 shadow-2xs border border-border/30 shrink-0">
+                          {task.status?.replace(/_/g, ' ')}
+                        </span>
                       </div>
-                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-success ring-2 ring-card" />
+                    );
+                  })
+              ) : (
+                <div className="p-4 text-center text-xs text-muted-foreground rounded-2xl bg-muted/20 border border-dashed border-border">
+                  No active tasks for today.
+                </div>
+              )}
+
+              {/* Announcements Item as List Accent */}
+              {announcements.length > 0 && (
+                <div className="p-3.5 rounded-r-2xl rounded-l-md border-l-4 border-primary bg-primary/5 border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0 min-h-[72px]">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl shrink-0 bg-primary text-white">
+                      <Megaphone className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold">{onlineUser.name || `User #${(onlineUser.id || onlineUser).substring(0, 5)}`}</p>
-                      <span className="text-[9px] text-muted-foreground capitalize">
-                        {(onlineUser.role || 'Member').toLowerCase().replace('_', ' ')}
+                      <h4 className="text-xs font-bold text-foreground line-clamp-1">{announcements[0].title}</h4>
+                      <span className="text-[10px] text-muted-foreground font-medium block mt-0.5">
+                        Team Announcement
                       </span>
                     </div>
                   </div>
-                ))
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                    Info
+                  </span>
+                </div>
               )}
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Admin specific activity timeline & team ranking distribution */}
-      {user.role === 'ADMIN' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Recent Audit Logs / System Activity */}
-          <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">Recent System Activities</h3>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
-              {activities.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-10">No activities recorded yet.</p>
-              ) : (
-                activities.map((log) => (
-                  <div key={log.id} className="flex gap-3 items-start border-l-2 border-primary/20 pl-3 ml-1">
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-foreground">
-                        {log.user?.name} <span className="font-mono text-[10px] text-muted-foreground font-normal">({log.user?.employeeId})</span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{log.details}</p>
-                      <span className="text-[9px] text-muted-foreground/60">{new Date(log.createdAt).toLocaleString()}</span>
-                    </div>
-                    <span className="text-[9px] font-bold bg-primary/10 text-primary-hover px-2 py-0.5 rounded-full uppercase shrink-0">
-                      {log.action}
+      </motion.div>
+
+      {/* 5. Recent Activity & Team Performance Split */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Activity Log */}
+        <div className="clean-card text-left space-y-4">
+          <div className="flex items-center justify-between border-b border-border/30 pb-3">
+            <h3 className="text-sm font-bold text-foreground">Recent System Activities</h3>
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+            {activities.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">No recent activity logs.</p>
+            ) : (
+              activities.map((act) => (
+                <div key={act._id} className="flex items-start justify-between gap-3 text-xs border-b border-border/30 pb-2.5 last:border-0">
+                  <div>
+                    <span className="font-bold text-foreground">{act.userName || 'System'}</span>
+                    {act.userCode && <span className="text-[10px] text-muted-foreground font-mono ml-1 font-semibold">({act.userCode})</span>}
+                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">{act.action}</p>
+                    <span className="text-[10px] text-muted-foreground/60 font-mono block mt-1">
+                      {act.createdAt || act.timestamp ? new Date(act.createdAt || act.timestamp).toLocaleString() : 'Just now'}
                     </span>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Team performance rankings card */}
-          <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">Team Performance Rankings</h3>
-              <Award className="h-4 w-4 text-primary" />
-            </div>
-            <div className="space-y-4">
-              {teamPerformances.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-10">No team rankings available.</p>
-              ) : (
-                teamPerformances.map((team, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span>{team.name}</span>
-                      <span className="text-muted-foreground">{team.performance}% Completed</span>
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
-                      <div 
-                        className="bg-gradient-to-r from-primary to-secondary h-2.5 rounded-full transition-all"
-                        style={{ width: `${team.performance}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                  <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-extrabold shrink-0 uppercase border border-primary/20">
+                    {act.type || 'LOG'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Team Performance Rankings */}
+        <div className="clean-card text-left space-y-4">
+          <div className="flex items-center justify-between border-b border-border/30 pb-3">
+            <h3 className="text-sm font-bold text-foreground">Team Performance Rankings</h3>
+            <Award className="h-4 w-4 text-primary" />
+          </div>
+          <div className="space-y-4">
+            {teamPerformances.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">No teams created yet.</p>
+            ) : (
+              teamPerformances.map((team, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">{team.name}</span>
+                    <span className="text-primary font-mono">{team.performance}% Completed</span>
+                  </div>
+                  <div className="h-2 w-full bg-primary/10 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all duration-500" 
+                      style={{ width: `${Math.max(team.performance, 5)}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+    </motion.div>
   );
 };
 

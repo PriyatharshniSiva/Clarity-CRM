@@ -94,7 +94,7 @@ const Attendance = () => {
         type: 'LEAVE'
       });
       setShowPreviewModal(false);
-      setAlert('Formal Leave Letter submitted successfully! Awaiting Super Admin review & sanction.');
+      setAlert('Formal Leave Letter submitted successfully! Awaiting Admin review & sanction.');
       fetchLeaves();
     } catch (err) {
       setAlert(err.response?.data?.message || 'Failed to submit request.');
@@ -468,29 +468,29 @@ const Attendance = () => {
               Submitted Leave Application Letters
             </h3>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse text-left">
+            <div className="w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[700px] text-sm border-collapse text-left">
                 <thead>
-                  <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20">
-                    <th className="px-4 py-3">Letter Subject & Type</th>
-                    <th className="px-4 py-3">Duration</th>
-                    <th className="px-4 py-3">Sanction Status</th>
-                    <th className="px-4 py-3 text-right">View Letter</th>
+                  <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 whitespace-nowrap">
+                    <th className="px-4 py-3 whitespace-nowrap">Letter Subject & Type</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Duration</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Sanction Status</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">View Letter</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/25">
                   {leaves.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-xs">
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-xs whitespace-nowrap">
                         No leave or WFH application letters submitted yet.
                       </td>
                     </tr>
                   ) : (
                     leaves.map((l) => (
-                      <tr key={l.id} className="hover:bg-muted/10 transition-all text-xs">
-                        <td className="px-4 py-3">
+                      <tr key={l.id} className="hover:bg-muted/10 transition-all text-xs whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
-                            <span className="font-bold text-foreground line-clamp-1">{l.subject || l.reason}</span>
+                            <span className="font-bold text-foreground max-w-xs truncate block" title={l.subject || l.reason}>{l.subject || l.reason}</span>
                             <span className={`inline-flex w-max rounded px-1.5 py-0.5 text-[9px] font-bold font-mono ${l.type === 'WFH' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-rose-500/10 text-rose-600'}`}>
                               {l.type}
                             </span>
@@ -499,9 +499,9 @@ const Attendance = () => {
                         <td className="px-4 py-3 font-medium whitespace-nowrap">
                           {formatLeavePeriod(l.startDate, l.endDate)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {l.status === 'APPROVED' ? (
-                            <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-600">
+                            <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-primary/10 text-primary">
                               ACCEPTED (WFH Assigned)
                             </span>
                           ) : l.status === 'REJECTED' ? (
@@ -514,7 +514,7 @@ const Attendance = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
                           <button
                             onClick={() => setViewingLetter(l)}
                             className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-all"
@@ -532,7 +532,7 @@ const Attendance = () => {
           </div>
 
           <div className="text-[10px] text-muted-foreground bg-muted/40 p-3 rounded-xl border border-border/30 mt-4">
-            <span className="font-bold text-foreground">Rule: </span> When Super Admin accepts your letter, Work From Home (WFH) permission is automatically activated for your dates. If declined, your status for those dates is marked as ABSENT.
+            <span className="font-bold text-foreground">Rule: </span> When Admin accepts your letter, Work From Home (WFH) permission is automatically activated for your dates. If declined, your status for those dates is marked as ABSENT.
           </div>
         </div>
       </div>
@@ -601,11 +601,11 @@ const Attendance = () => {
               )}
 
               {clockInStatus.state === 'OPEN_ON_TIME' && new Date() > new Date(clockInStatus.shiftStartTime) && (
-                <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 flex items-center justify-between text-xs font-semibold text-left mb-4 animate-in slide-in-from-top duration-300">
+                <div className="p-4 rounded-2xl border border-primary/30 bg-primary/10 text-primary flex items-center justify-between text-xs font-semibold text-left mb-4 animate-in slide-in-from-top duration-300">
                   <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                     <div>
-                      <p className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400">Grace Period Active ✨</p>
+                      <p className="font-extrabold text-sm text-primary">Grace Period Active ✨</p>
                       <p className="text-[11px] opacity-90 mt-0.5">
                         Clock-in is still considered <strong>On Time (PRESENT)</strong> until <strong>{clockInStatus.windowCloseFormatted}</strong>.
                       </p>
@@ -632,10 +632,10 @@ const Attendance = () => {
 
           {/* Active Leave Banner on Clock Tab */}
           {activeTodayLeave && (
-            <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold text-left ${activeTodayLeave.status === 'APPROVED' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : activeTodayLeave.status === 'REJECTED' ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300'}`}>
+            <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold text-left ${activeTodayLeave.status === 'APPROVED' ? 'bg-primary/10 border-primary/30 text-primary' : activeTodayLeave.status === 'REJECTED' ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300'}`}>
               <div className="flex items-center gap-3">
                 {activeTodayLeave.status === 'APPROVED' ? (
-                  <Home className="h-5 w-5 text-emerald-500 shrink-0" />
+                  <Home className="h-5 w-5 text-primary shrink-0" />
                 ) : activeTodayLeave.status === 'REJECTED' ? (
                   <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
                 ) : (
@@ -643,10 +643,10 @@ const Attendance = () => {
                 )}
                 <div>
                   <p className="font-extrabold text-sm">
-                    {activeTodayLeave.status === 'APPROVED' ? 'Work From Home (WFH) Assigned for Today!' : activeTodayLeave.status === 'REJECTED' ? 'Leave Request Declined by Super Admin' : 'Leave Letter Pending Super Admin Sanction'}
+                    {activeTodayLeave.status === 'APPROVED' ? 'Work From Home (WFH) Assigned for Today!' : activeTodayLeave.status === 'REJECTED' ? 'Leave Request Declined by Admin' : 'Leave Letter Pending Admin Sanction'}
                   </p>
                   <p className="text-[11px] opacity-90 mt-0.5">
-                    {activeTodayLeave.status === 'APPROVED' ? 'Super Admin has accepted your leave letter. Location boundary checks are bypassed for remote clock-in.' : activeTodayLeave.status === 'REJECTED' ? 'Your leave request was declined. Attendance for today is recorded as ABSENT.' : 'Your formal leave letter has been submitted and is currently awaiting Super Admin approval.'}
+                    {activeTodayLeave.status === 'APPROVED' ? 'Admin has accepted your leave letter. Location boundary checks are bypassed for remote clock-in.' : activeTodayLeave.status === 'REJECTED' ? 'Your leave request was declined. Attendance for today is recorded as ABSENT.' : 'Your formal leave letter has been submitted and is currently awaiting Admin approval.'}
                   </p>
                 </div>
               </div>
@@ -656,8 +656,8 @@ const Attendance = () => {
           {/* Main clock portal */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Clock In / Out Panel */}
-            <div className="md:col-span-2 rounded-2xl border border-border/40 bg-card p-6 shadow-premium flex flex-col items-center justify-center text-center">
-              <div className="rounded-full bg-primary/10 p-4 mb-4 text-primary animate-pulse">
+            <div className="md:col-span-2 glass-card p-6 border border-white/70 dark:border-white/10 shadow-lg flex flex-col items-center justify-center text-center">
+              <div className="rounded-full bg-primary/10 p-4 mb-4 text-primary border border-primary/20">
                 <Clock className="h-10 w-10" />
               </div>
 
@@ -677,8 +677,8 @@ const Attendance = () => {
                     Shift Ended • Clocked Out
                   </span>
                 ) : (
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 pulse-active" />
+                  <span className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-active" />
                     <span>On Shift • Clocked In ({clockedRecord.status})</span>
                   </span>
                 )}
@@ -697,7 +697,7 @@ const Attendance = () => {
                 <button
                   onClick={handleClockOut}
                   disabled={loading || !clockedRecord || !!clockedRecord.clockOut}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-danger text-white py-3 text-sm font-semibold hover:bg-danger/90 active:scale-95 disabled:opacity-40 shadow-lg shadow-danger/25 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white py-3 text-sm font-semibold active:scale-95 disabled:opacity-40 shadow-md shadow-rose-600/25 transition-all"
                 >
                   <Square className="h-4 w-4" />
                   <span>Clock Out</span>
@@ -735,7 +735,7 @@ const Attendance = () => {
             </div>
 
             {/* Telemetry metadata box */}
-            <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left flex flex-col justify-between">
+            <div className="glass-card p-6 border border-white/70 dark:border-white/10 shadow-lg text-left flex flex-col justify-between">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-tight text-foreground/80 border-b border-border/30 pb-2 mb-4">
                   Active Session Telemetry
@@ -767,51 +767,51 @@ const Attendance = () => {
           </div>
 
           {/* History table */}
-          <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-premium text-left animate-in fade-in duration-300">
+          <div className="glass-card p-6 border border-white/70 dark:border-white/10 shadow-lg text-left animate-in fade-in duration-300">
             <h3 className="text-xs font-bold uppercase tracking-tight text-foreground/80 mb-4 border-b border-border/30 pb-2">
               Recent Check-in History
             </h3>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+            <div className="w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm border-collapse">
                 <thead>
-                  <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20">
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Clock In</th>
-                    <th className="px-4 py-3">Clock Out</th>
-                    <th className="px-4 py-3">Working Hours</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Telemetry IP</th>
-                    <th className="px-4 py-3 text-right">Location</th>
+                  <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 whitespace-nowrap">
+                    <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Clock In</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Clock Out</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Working Hours</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Telemetry IP</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">Location</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/25">
                   {recentLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground whitespace-nowrap">
                         No attendance logs found.
                       </td>
                     </tr>
                   ) : (
                     recentLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-muted/10 transition-all">
-                        <td className="px-4 py-3 font-semibold">{new Date(log.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{new Date(log.clockIn).toLocaleTimeString()}</td>
-                        <td className="px-4 py-3 font-mono text-xs">
+                      <tr key={log.id} className="hover:bg-muted/10 transition-all whitespace-nowrap">
+                        <td className="px-4 py-3 font-semibold whitespace-nowrap">{new Date(log.date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{new Date(log.clockIn).toLocaleTimeString()}</td>
+                        <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
                           {log.clockOut ? new Date(log.clockOut).toLocaleTimeString() : 'Shift Active'}
                         </td>
-                        <td className="px-4 py-3">{formatWorkingHours(log.workingHours)}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${log.status === 'PRESENT' || log.status === 'WORK_FROM_HOME' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : log.status === 'LATE' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-red-500/10 text-red-500'}`}>
+                        <td className="px-4 py-3 whitespace-nowrap">{formatWorkingHours(log.workingHours)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${log.status === 'PRESENT' || log.status === 'WORK_FROM_HOME' ? 'bg-primary/10 text-primary' : log.status === 'LATE' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-red-500/10 text-red-500'}`}>
                             {log.status} {log.lateMinutes ? `(${log.lateMinutes}m late)` : ''}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.ipAddress}</td>
-                        <td className="px-4 py-3 text-xs text-right font-medium font-sans">
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{log.ipAddress}</td>
+                        <td className="px-4 py-3 text-xs text-right font-medium font-sans whitespace-nowrap">
                           <div className="flex flex-col gap-1.5 items-end">
                             {log.clockInLocation && (
                               <div className="flex items-start gap-1">
-                                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase shrink-0 mt-0.5">In</span>
+                                <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase shrink-0 mt-0.5">In</span>
                                 {formatLocationDisplay(log.clockInLocation)}
                               </div>
                             )}
@@ -869,7 +869,7 @@ const Attendance = () => {
                   <span className="text-[10px] text-muted-foreground font-semibold">Request Type & Status</span>
                   <p className="font-mono font-bold text-indigo-500">{viewingLetter?.type || leaveForm.type}</p>
                   {viewingLetter && (
-                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${viewingLetter.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' : viewingLetter.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-600'}`}>
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${viewingLetter.status === 'APPROVED' ? 'bg-primary/10 text-primary' : viewingLetter.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-600'}`}>
                       {viewingLetter.status}
                     </span>
                   )}

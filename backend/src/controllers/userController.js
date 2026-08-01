@@ -2,6 +2,8 @@ const bcrypt = require('bcrypt');
 const prisma = require('../utils/db');
 const { sendWelcomeEmail } = require('../services/email');
 const { logActivity } = require('../utils/activityLogger');
+const { addUserToCompanyChat, removeUserFromCompanyChat } = require('../services/companyChatService');
+const { disconnectUserSocket } = require('../socket');
 
 // Helper to auto-generate employee ID per role
 const generateEmployeeId = async (role) => {
@@ -22,10 +24,72 @@ const formatDobToPassword = (dobString) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, phone, dob, college, department, joiningDate, role } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      dob,
+      college,
+      department,
+      joiningDate,
+      role,
+      candidateType,
+      degree,
+      currentYearSemester,
+      graduationYear,
+      internshipRole,
+      internshipDuration,
+      highestQualification,
+      keySkills,
+      companyName,
+      designation,
+      totalExperience
+    } = req.body;
 
     if (!name || !email || !dob || !role) {
       return res.status(400).json({ message: 'Name, email, date of birth, and role are required.' });
+    }
+
+    // Check candidate type dynamic mandatory fields if candidateType is provided
+    let resumePath = null;
+    if (req.files?.resume?.[0]) {
+      resumePath = `/uploads/resumes/${req.files.resume[0].filename}`;
+    } else if (req.body.resume) {
+      resumePath = req.body.resume;
+    }
+
+    let profilePicPath = null;
+    if (req.files?.profilePic?.[0]) {
+      profilePicPath = `/uploads/profile-pics/${req.files.profilePic[0].filename}`;
+    }
+
+    if (candidateType) {
+      if (candidateType === 'Student') {
+        if (!college && !companyName) return res.status(400).json({ message: 'College/University Name is required for Student.' });
+        if (!degree) return res.status(400).json({ message: 'Degree is required for Student.' });
+        if (!currentYearSemester) return res.status(400).json({ message: 'Current Year / Semester is required for Student.' });
+        if (!resumePath) return res.status(400).json({ message: 'Resume (PDF/DOC) is required for Student.' });
+      } else if (candidateType === 'Graduate') {
+        if (!college && !companyName) return res.status(400).json({ message: 'College/University Name is required for Graduate.' });
+        if (!degree) return res.status(400).json({ message: 'Degree is required for Graduate.' });
+        if (!graduationYear) return res.status(400).json({ message: 'Graduation Year is required for Graduate.' });
+        if (!resumePath) return res.status(400).json({ message: 'Resume (PDF/DOC) is required for Graduate.' });
+      } else if (candidateType === 'Intern') {
+        if (!college && !companyName) return res.status(400).json({ message: 'College / Company Name is required for Intern.' });
+        if (!internshipRole) return res.status(400).json({ message: 'Internship Role is required for Intern.' });
+        if (!internshipDuration) return res.status(400).json({ message: 'Internship Duration is required for Intern.' });
+        if (!resumePath) return res.status(400).json({ message: 'Resume (PDF/DOC) is required for Intern.' });
+      } else if (candidateType === 'Fresher') {
+        if (!highestQualification) return res.status(400).json({ message: 'Highest Qualification is required for Fresher.' });
+        if (!graduationYear) return res.status(400).json({ message: 'Graduation Year is required for Fresher.' });
+        if (!keySkills) return res.status(400).json({ message: 'Key Skills are required for Fresher.' });
+        if (!resumePath) return res.status(400).json({ message: 'Resume (PDF/DOC) is required for Fresher.' });
+      } else if (candidateType === 'Professional') {
+        if (!companyName && !college) return res.status(400).json({ message: 'Current / Previous Company is required for Professional.' });
+        if (!designation) return res.status(400).json({ message: 'Designation is required for Professional.' });
+        if (!totalExperience) return res.status(400).json({ message: 'Total Experience is required for Professional.' });
+        if (!resumePath) return res.status(400).json({ message: 'Resume (PDF/DOC) is required for Professional.' });
+      }
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -45,13 +109,29 @@ const createUser = async (req, res) => {
         password: hashedPassword,
         phone,
         dob: new Date(dob),
-        college,
+        college: college || companyName || null,
         department,
         joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
         role,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        profilePic: profilePicPath,
+        candidateType: candidateType || null,
+        resume: resumePath || null,
+        degree: degree || null,
+        currentYearSemester: currentYearSemester || null,
+        graduationYear: graduationYear || null,
+        internshipRole: internshipRole || null,
+        internshipDuration: internshipDuration || null,
+        highestQualification: highestQualification || null,
+        keySkills: keySkills || null,
+        companyName: companyName || college || null,
+        designation: designation || null,
+        totalExperience: totalExperience || null
       }
     });
+
+    // Sync user with Company Chat Room
+    await addUserToCompanyChat(newUser.id);
 
     // Send automated email in background
     sendWelcomeEmail(newUser, tempPasswordText).catch((err) => {
@@ -68,13 +148,13 @@ const createUser = async (req, res) => {
     res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Create user error:', error);
-    res.status(500).json({ message: 'Failed to create user.' });
+    res.status(500).json({ message: error.message || 'Failed to create user.' });
   }
 };
 
 const getAllUsers = async (req, res) => {
   try {
-    const { role, status, teamId, search, page = 1, limit = 50 } = req.query;
+    const { role, status, teamId, search, page = 1, limit = 50, excludeSuperAdmin = 'true', excludeSelf } = req.query;
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -83,8 +163,29 @@ const getAllUsers = async (req, res) => {
     // Filter clauses
     const where = {};
 
+    // Always exclude Super Admin account from registry listings
+    if (excludeSuperAdmin === 'true' || role?.includes('ADMIN') || role?.includes('TEAM_LEADER')) {
+      where.email = { not: 'admin@enterprise-crm.com' };
+      where.employeeId = { not: 'AD-0001' };
+    }
+
+    if (excludeSelf === 'true' && req.user?.id) {
+      where.id = { not: req.user.id };
+    }
+
     if (role) {
-      where.role = role;
+      let parsedRoles = [];
+      if (typeof role === 'string' && role.includes(',')) {
+        parsedRoles = role.split(',').map(r => r.trim());
+      } else if (Array.isArray(role)) {
+        parsedRoles = role;
+      } else {
+        parsedRoles = [role];
+      }
+      parsedRoles = parsedRoles.filter(r => r === 'ADMIN' || r === 'TEAM_LEADER' || r === 'INTERN' || r === 'EMPLOYEE');
+      if (parsedRoles.length > 0) {
+        where.role = { in: parsedRoles };
+      }
     }
     if (status) {
       where.status = status;
@@ -101,7 +202,9 @@ const getAllUsers = async (req, res) => {
         { email: { contains: search, mode: 'insensitive' } },
         { employeeId: { contains: search, mode: 'insensitive' } },
         { department: { contains: search, mode: 'insensitive' } },
-        { college: { contains: search, mode: 'insensitive' } }
+        { college: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
+        { candidateType: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -152,6 +255,9 @@ const getUserById = async (req, res) => {
         attendances: {
           take: 30,
           orderBy: { date: 'desc' }
+        },
+        assignedAssets: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -171,7 +277,28 @@ const getUserById = async (req, res) => {
 const editUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, dob, college, department, joiningDate, role, status } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      dob,
+      college,
+      department,
+      joiningDate,
+      role,
+      status,
+      candidateType,
+      degree,
+      currentYearSemester,
+      graduationYear,
+      internshipRole,
+      internshipDuration,
+      highestQualification,
+      keySkills,
+      companyName,
+      designation,
+      totalExperience
+    } = req.body;
 
     // Fetch current user to compare DOB
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -183,11 +310,33 @@ const editUser = async (req, res) => {
       name,
       email,
       phone,
-      college,
+      college: college !== undefined ? (college || companyName || null) : existingUser.college,
       department,
       role,
       status
     };
+
+    if (candidateType !== undefined) data.candidateType = candidateType || null;
+    if (degree !== undefined) data.degree = degree || null;
+    if (currentYearSemester !== undefined) data.currentYearSemester = currentYearSemester || null;
+    if (graduationYear !== undefined) data.graduationYear = graduationYear || null;
+    if (internshipRole !== undefined) data.internshipRole = internshipRole || null;
+    if (internshipDuration !== undefined) data.internshipDuration = internshipDuration || null;
+    if (highestQualification !== undefined) data.highestQualification = highestQualification || null;
+    if (keySkills !== undefined) data.keySkills = keySkills || null;
+    if (companyName !== undefined) data.companyName = companyName || college || null;
+    if (designation !== undefined) data.designation = designation || null;
+    if (totalExperience !== undefined) data.totalExperience = totalExperience || null;
+
+    if (req.files?.resume?.[0]) {
+      data.resume = `/uploads/resumes/${req.files.resume[0].filename}`;
+    } else if (req.body.resume !== undefined) {
+      data.resume = req.body.resume || null;
+    }
+
+    if (req.files?.profilePic?.[0]) {
+      data.profilePic = `/uploads/profile-pics/${req.files.profilePic[0].filename}`;
+    }
 
     let dobPasswordReset = false;
 
@@ -235,7 +384,7 @@ const editUser = async (req, res) => {
     res.json({ ...userWithoutPassword, dobPasswordReset });
   } catch (error) {
     console.error('Edit user error:', error);
-    res.status(500).json({ message: 'Failed to update user.' });
+    res.status(500).json({ message: error.message || 'Failed to update user.' });
   }
 };
 
@@ -245,10 +394,70 @@ const deleteUser = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    await prisma.user.delete({ where: { id } });
+    if (user.role === 'SUPER_ADMIN' || user.email === 'admin@enterprise-crm.com' || user.employeeId === 'AD-0001') {
+      return res.status(403).json({ success: false, message: 'Super Admin account cannot be modified or deleted.' });
+    }
+
+    // Wrap the complete deletion inside an atomic Prisma transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Reset references on assigned Assets: set assignedToId = null, assignedDate = null, expectedReturn = null, status = AVAILABLE
+      await tx.asset.updateMany({
+        where: { assignedToId: id },
+        data: {
+          assignedToId: null,
+          assignedDate: null,
+          expectedReturn: null,
+          status: 'AVAILABLE'
+        }
+      });
+
+      // 2. Set assignedById = null on AssetAssignment history
+      await tx.assetAssignment.updateMany({
+        where: { assignedById: id },
+        data: { assignedById: null }
+      });
+
+      // 3. Reset references on assigned Tickets: set assigneeId = null
+      await tx.ticket.updateMany({
+        where: { assigneeId: id },
+        data: { assigneeId: null }
+      });
+
+      // 4. Reset references on Teams led by this user: set leaderId = null
+      await tx.team.updateMany({
+        where: { leaderId: id },
+        data: { leaderId: null }
+      });
+
+      // 5. Delete team memberships
+      await tx.teamMember.deleteMany({
+        where: { userId: id }
+      });
+
+      // 6. Reset targetUserId on Announcements
+      await tx.announcement.updateMany({
+        where: { targetUserId: id },
+        data: { targetUserId: null }
+      });
+
+      // 7. Delete ChatRoomMember records
+      await tx.chatRoomMember.deleteMany({
+        where: { userId: id }
+      });
+
+      // 8. Permanently delete user record from PostgreSQL
+      await tx.user.delete({
+        where: { id }
+      });
+    });
+
+    // Disconnect active socket connection if user is online
+    if (disconnectUserSocket) {
+      disconnectUserSocket(id);
+    }
 
     await logActivity({
       userId: req.user.id,
@@ -256,10 +465,14 @@ const deleteUser = async (req, res) => {
       details: `Deleted user ${user.name} (${user.employeeId})`
     });
 
-    res.json({ message: 'User deleted successfully.' });
+    return res.json({
+      success: true,
+      message: 'Record deleted successfully.',
+      deletedUserId: id
+    });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Failed to delete user.' });
+    return res.status(500).json({ success: false, message: 'Failed to delete record. Please try again.' });
   }
 };
 
@@ -276,6 +489,12 @@ const toggleUserStatus = async (req, res) => {
       where: { id },
       data: { status }
     });
+
+    if (status === 'ACTIVE') {
+      await addUserToCompanyChat(id);
+    } else {
+      await removeUserFromCompanyChat(id);
+    }
 
     await logActivity({
       userId: req.user.id,
@@ -375,6 +594,8 @@ const bulkImport = async (req, res) => {
           status: 'ACTIVE'
         }
       });
+
+      await addUserToCompanyChat(created.id);
 
       sendWelcomeEmail(created, tempPasswordText).catch((err) => {
         console.error('Failed to send welcome email inside bulk import:', created.email, err);

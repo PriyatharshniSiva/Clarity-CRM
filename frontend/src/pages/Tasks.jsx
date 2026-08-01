@@ -63,9 +63,11 @@ const Tasks = () => {
     teamId: '',
     type: 'TASK',
     storyPoints: 0,
-    sprintName: ''
+    sprintName: '',
+    projectId: ''
   });
   const [taskFiles, setTaskFiles] = useState([]);
+  const [projectsList, setProjectsList] = useState([]);
 
   // Edit task states
   const [isEditing, setIsEditing] = useState(false);
@@ -78,7 +80,8 @@ const Tasks = () => {
     status: 'PENDING',
     type: 'TASK',
     storyPoints: 0,
-    sprintName: ''
+    sprintName: '',
+    projectId: ''
   });
 
   // Submissions form
@@ -249,9 +252,19 @@ const Tasks = () => {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const res = await api.get('/projects');
+      setProjectsList(res.data.projects || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchRepositories();
+    fetchProjects();
     if (user.role === 'ADMIN' || user.role === 'TEAM_LEADER') {
       fetchTeamMembers();
       fetchTeams();
@@ -541,10 +554,45 @@ const Tasks = () => {
       case 'BUG':
         return <Bug className="h-3.5 w-3.5 text-red-500" />;
       case 'STORY':
-        return <Bookmark className="h-3.5 w-3.5 text-emerald-500" fill="currentColor" />;
+        return <Bookmark className="h-3.5 w-3.5 text-primary" fill="currentColor" />;
       default:
         return <CheckSquare className="h-3.5 w-3.5 text-sky-500" fill="currentColor" />;
     }
+  };
+
+  const getAvailableAssignees = (targetProjectId) => {
+    if (!targetProjectId) return teamMembers;
+    const project = projectsList.find(p => p.id === targetProjectId);
+    if (!project) return teamMembers;
+
+    const projectMemberUserIds = new Set();
+    if (project.creatorId) projectMemberUserIds.add(project.creatorId);
+    if (project.leaderId) projectMemberUserIds.add(project.leaderId);
+    if (project.members) {
+      project.members.forEach(m => projectMemberUserIds.add(m.userId));
+    }
+
+    const projectAssignees = teamMembers.filter(m => projectMemberUserIds.has(m.id));
+
+    const projTeamObj = teams.find(t => t.id === project.teamId);
+    const projTeamUserIds = new Set();
+    if (projTeamObj) {
+      if (projTeamObj.leaderId) projTeamUserIds.add(projTeamObj.leaderId);
+      if (projTeamObj.members) projTeamObj.members.forEach(tm => projTeamUserIds.add(tm.userId || tm.user?.id));
+    }
+
+    return projectAssignees.map(m => {
+      let badge = '';
+      if (m.id === project.leaderId) {
+        badge = ' (Team Leader)';
+      } else if (project.teamId && !projTeamUserIds.has(m.id)) {
+        badge = ' (External)';
+      }
+      return {
+        ...m,
+        displayName: `${m.name}${badge}`
+      };
+    });
   };
 
   const renderSummaryTab = () => {
@@ -562,29 +610,29 @@ const Tasks = () => {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm flex flex-col justify-between">
+          <div className="glass-card p-4 border border-white/70 dark:border-white/10 shadow-lg flex flex-col justify-between">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Work Completion</span>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-xl font-black">{rate}%</span>
-              <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden border">
-                <div className="bg-success h-full" style={{ width: `${rate}%` }} />
+              <span className="text-xl font-black text-foreground">{rate}%</span>
+              <div className="flex-1 bg-muted/60 h-2 rounded-full overflow-hidden border border-border/30">
+                <div className="bg-primary h-full rounded-full" style={{ width: `${rate}%` }} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
+          <div className="glass-card p-4 border border-white/70 dark:border-white/10 shadow-lg">
             <span className="text-[10px] font-bold text-muted-foreground uppercase block">Active Work items</span>
             <span className="text-xl font-black mt-2 block text-primary">{inProgress + review + pending} Open</span>
           </div>
 
-          <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
+          <div className="glass-card p-4 border border-white/70 dark:border-white/10 shadow-lg">
             <span className="text-[10px] font-bold text-muted-foreground uppercase block">Total Sprints Weight</span>
-            <span className="text-xl font-black mt-2 block text-violet-500">
+            <span className="text-xl font-black mt-2 block text-primary">
               {filteredTasks.reduce((acc, t) => acc + (t.storyPoints || 0), 0)} Story Points
             </span>
           </div>
 
-          <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
+          <div className="glass-card p-4 border border-white/70 dark:border-white/10 shadow-lg">
             <span className="text-[10px] font-bold text-muted-foreground uppercase block">Bugs Density</span>
             <span className="text-xl font-black mt-2 block text-rose-500">{bugs} Active Bugs</span>
           </div>
@@ -592,11 +640,11 @@ const Tasks = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Task Type Breakdown */}
-          <div className="rounded-xl border border-border/40 bg-card p-5 shadow-sm text-left">
+          <div className="glass-card p-5 border border-white/70 dark:border-white/10 shadow-lg text-left">
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b pb-2 mb-3">Task Type Breakdown</h4>
             <div className="space-y-3">
               {[
-                { type: 'User Stories', count: stories, pct: total > 0 ? Math.round((stories/total)*100) : 0, color: 'bg-emerald-500' },
+                { type: 'User Stories', count: stories, pct: total > 0 ? Math.round((stories/total)*100) : 0, color: 'bg-primary' },
                 { type: 'Engineering Tasks', count: tasksCount, pct: total > 0 ? Math.round((tasksCount/total)*100) : 0, color: 'bg-sky-500' },
                 { type: 'Defect Reports / Bugs', count: bugs, pct: total > 0 ? Math.round((bugs/total)*100) : 0, color: 'bg-red-500' }
               ].map((item, i) => (
@@ -657,7 +705,7 @@ const Tasks = () => {
         </div>
 
         {tasksList.length === 0 ? (
-          <div className="border border-dashed rounded-xl p-8 text-center text-xs text-muted-foreground">
+          <div className="bg-white dark:bg-slate-900 border border-dashed border-border/60 rounded-2xl p-8 text-center text-xs font-semibold text-muted-foreground shadow-sm">
             No items in this backlog segment.
           </div>
         ) : (
@@ -666,7 +714,7 @@ const Tasks = () => {
               <div 
                 key={task.id} 
                 onClick={() => openDetailModal(task)}
-                className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-border/30 rounded-xl p-3 shadow-sm hover:border-primary/30 transition-all cursor-pointer text-left gap-3"
+                className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-slate-900 border border-border/60 rounded-2xl p-3.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer text-left gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {getTypeIcon(task.type)}
@@ -693,7 +741,7 @@ const Tasks = () => {
                   </span>
 
                   <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[8px] font-extrabold uppercase ${
-                    task.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
+                    task.status === 'APPROVED' ? 'bg-primary/10 text-primary' :
                     task.status === 'IN_PROGRESS' ? 'bg-yellow-500/10 text-yellow-600' :
                     task.status === 'WAITING_FOR_REVIEW' ? 'bg-purple-500/10 text-purple-600' :
                     'bg-slate-500/10 text-slate-600'
@@ -1039,7 +1087,7 @@ const Tasks = () => {
 
   const renderDocsTab = () => {
     const documents = [
-      { title: 'MRF Enterprise Intern Onboarding Guide', desc: 'Step-by-step checklist for system configurations and access setup.', author: 'Super Admin', date: 'Jul 15, 2026' },
+      { title: 'MRF Enterprise Intern Onboarding Guide', desc: 'Step-by-step checklist for system configurations and access setup.', author: 'Admin', date: 'Jul 15, 2026' },
       { title: 'Frontend Coding Style & UI Standards', desc: 'Rules for tailwind configs, custom CSS classes, and Lucide icons.', author: 'Suraj Somu', date: 'Jul 12, 2026' },
       { title: 'API Endpoints & Database Schemas Guide', desc: 'Documentation of attendance and team route endpoints parameters.', author: 'Suraj Somu', date: 'Jul 10, 2026' }
     ];
@@ -1252,20 +1300,11 @@ const Tasks = () => {
             </select>
           </div>
         </div>
-
-        <div>
-          {['ADMIN', 'TEAM_LEADER'].includes(user.role) && (
-            <button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-1 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-hover transition-all">
-              <Plus className="h-3.5 w-3.5" />
-              <span>Create</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Switch Render according to Sub Tab selected */}
       {activeSubTab === 'Board' ? (
-        <div className="flex-1 flex overflow-x-auto gap-4 h-full pb-4 min-h-[500px] scrollbar-thin">
+        <div className="w-full max-w-full min-w-0 flex-1 flex overflow-x-auto gap-4 h-full pb-4 min-h-[500px] scrollbar-thin">
             {columns.map((col, idx) => {
               const isHovered = activeDragCol === col.title;
               return (
@@ -1275,7 +1314,7 @@ const Tasks = () => {
                   onDragEnter={() => setActiveDragCol(col.title)}
                   onDragLeave={() => setActiveDragCol(null)}
                   onDrop={(e) => onDrop(e, col.title)}
-                  className={`flex flex-col flex-1 min-w-[280px] max-w-[340px] bg-card/65 border ${
+                  className={`flex flex-col shrink-0 min-w-[280px] max-w-[320px] bg-card/65 border ${
                     isHovered ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' : 'border-border/30'
                   } rounded-xl p-3 h-full overflow-hidden transition-all duration-200`}
                 >
@@ -1349,16 +1388,6 @@ const Tasks = () => {
                     )}
                   </div>
 
-                  {/* Inline Creation Trigger inside To-Do column */}
-                  {col.title === 'TO DO' && ['ADMIN', 'TEAM_LEADER'].includes(user.role) && (
-                    <button
-                      onClick={() => setCreateModalOpen(true)}
-                      className="mt-2 w-full flex items-center justify-center gap-1.5 border border-dashed rounded-lg py-2 text-[11px] font-bold hover:bg-muted text-muted-foreground transition-all"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Create Issue</span>
-                    </button>
-                  )}
                 </div>
               );
             })}
@@ -1379,177 +1408,10 @@ const Tasks = () => {
         renderFormsTab()
       ) : null}
 
-      {/* Task Creation Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border/40 bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold">Assign New Task</h3>
-              <button className="rounded-lg p-1 hover:bg-muted" onClick={() => setCreateModalOpen(false)}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSubmit} className="mt-4 space-y-4 text-left">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Assignee Type</label>
-                  <select 
-                    value={assignType} 
-                    onChange={(e) => setAssignType(e.target.value)}
-                  >
-                    <option value="INDIVIDUAL">Individual Intern</option>
-                    <option value="TEAM">Entire Team</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  {assignType === 'TEAM' ? (
-                    <>
-                      <label className="text-xs font-semibold text-muted-foreground">Target Team *</label>
-                      <select 
-                        required
-                        value={createFormData.teamId} 
-                        onChange={(e) => setCreateFormData({ ...createFormData, teamId: e.target.value })}
-                      >
-                        <option value="">Select Team</option>
-                        {teams.map(team => (
-                          <option key={team.id} value={team.id}>
-                            {team.name} ({team.members?.length || 0} members)
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      <label className="text-xs font-semibold text-muted-foreground">Assigned Intern *</label>
-                      <select 
-                        required
-                        value={createFormData.assigneeId} 
-                        onChange={(e) => setCreateFormData({ ...createFormData, assigneeId: e.target.value })}
-                      >
-                        <option value="">Select Intern</option>
-                        {teamMembers.map(member => (
-                          <option key={member.id} value={member.id}>{member.name} ({member.employeeId})</option>
-                        ))}
-                      </select>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Task Title *</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="Task title" 
-                  value={createFormData.title} 
-                  onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })} 
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Task Description *</label>
-                <textarea 
-                  rows={3} 
-                  required 
-                  placeholder="Task details and instructions" 
-                  className="w-full border border-border bg-card px-4 py-2 text-sm rounded-lg"
-                  value={createFormData.description} 
-                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })} 
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Task Type</label>
-                  <select 
-                    value={createFormData.type} 
-                    onChange={(e) => setCreateFormData({ ...createFormData, type: e.target.value })}
-                  >
-                    <option value="TASK">Task</option>
-                    <option value="BUG">Bug</option>
-                    <option value="STORY">Story</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Story Points</label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value={createFormData.storyPoints} 
-                    onChange={(e) => setCreateFormData({ ...createFormData, storyPoints: parseInt(e.target.value, 10) || 0 })} 
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Sprint Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Sprint 1" 
-                    value={createFormData.sprintName} 
-                    onChange={(e) => setCreateFormData({ ...createFormData, sprintName: e.target.value })} 
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Priority *</label>
-                  <select 
-                    value={createFormData.priority} 
-                    onChange={(e) => setCreateFormData({ ...createFormData, priority: e.target.value })}
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="URGENT">Urgent</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Deadline *</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={createFormData.deadline} 
-                    onChange={(e) => setCreateFormData({ ...createFormData, deadline: e.target.value })} 
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span>Attachments</span>
-                </label>
-                <input 
-                  type="file" 
-                  multiple 
-                  className="hidden" 
-                  id="task-file-input"
-                  onChange={(e) => setTaskFiles(Array.from(e.target.files))} 
-                />
-                <label 
-                  htmlFor="task-file-input" 
-                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border py-3 text-xs cursor-pointer hover:bg-muted/40 transition-all text-muted-foreground"
-                >
-                  <Upload className="h-4 w-4" />
-                  <span>{taskFiles.length > 0 ? `${taskFiles.length} files selected` : 'Select reference files'}</span>
-                </label>
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50 transition-all">
-                {loading ? 'Assigning...' : 'Assign Task'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Task Details Dialog Modal */}
       {detailModalOpen && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-border/40 bg-card p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 text-left">
+          <div className="w-full max-w-2xl max-w-[95vw] rounded-2xl border border-border/40 bg-card p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 text-left">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -1675,15 +1537,15 @@ const Tasks = () => {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Assigned Intern *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">Assigned Member *</label>
                   <select 
                     required
                     value={editFormData.assigneeId} 
                     onChange={(e) => setEditFormData({ ...editFormData, assigneeId: e.target.value })}
                   >
-                    <option value="">Select Intern</option>
-                    {teamMembers.map(member => (
-                      <option key={member.id} value={member.id}>{member.name} ({member.employeeId})</option>
+                    <option value="">Select Assignee</option>
+                    {getAvailableAssignees(editFormData.projectId || selectedTask?.projectId).map(member => (
+                      <option key={member.id} value={member.id}>{member.displayName || member.name} ({member.employeeId})</option>
                     ))}
                   </select>
                 </div>
@@ -1849,6 +1711,21 @@ const Tasks = () => {
                     <p className="text-xs font-semibold">{new Date(selectedTask.deadline).toLocaleDateString()}</p>
                   </div>
 
+                  {selectedTask.project && (
+                    <div className="space-y-1 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                      <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Project</h4>
+                      <p className="text-xs font-bold text-foreground">{selectedTask.project.name} ({selectedTask.project.projectCode})</p>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/chat')}
+                        className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow-xs hover:bg-primary-hover transition-all"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>Open Project Chat</span>
+                      </button>
+                    </div>
+                  )}
+
                   {selectedTask.storyPoints > 0 && (
                     <div className="space-y-1">
                       <h4 className="text-xs font-semibold text-muted-foreground">Story Points</h4>
@@ -1916,7 +1793,7 @@ const Tasks = () => {
                             <Upload className="h-3.5 w-3.5" />
                             <span>{submitFiles.length > 0 ? `${submitFiles.length} files selected` : 'Select work files'}</span>
                           </label>
-                          <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs py-2 rounded-lg font-semibold">
+                          <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white text-xs py-2 rounded-lg font-semibold">
                             Submit Work
                           </button>
                         </form>
@@ -1929,7 +1806,7 @@ const Tasks = () => {
                       <h4 className="text-xs font-bold">Review Submission</h4>
                       <button 
                         onClick={() => handleReviewDecision('APPROVED')}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs py-2 rounded-lg font-semibold"
+                        className="w-full bg-primary hover:bg-primary-hover text-white text-xs py-2 rounded-lg font-semibold"
                       >
                         Approve Work
                       </button>

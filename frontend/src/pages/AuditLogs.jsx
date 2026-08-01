@@ -87,43 +87,43 @@ const AuditLogs = () => {
       </div>
 
       {/* Audit Log Table */}
-      <div className="overflow-x-auto rounded-2xl border border-border/40 bg-card shadow-premium">
-        <table className="w-full text-sm border-collapse text-left">
+      <div className="w-full min-w-0 overflow-x-auto rounded-2xl border border-border/40 bg-card shadow-premium">
+        <table className="w-full min-w-[900px] text-sm border-collapse text-left">
           <thead>
-            <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20">
-              <th className="px-6 py-4">Operator</th>
-              <th className="px-6 py-4">Action Type</th>
-              <th className="px-6 py-4">Audit Details</th>
-              <th className="px-6 py-4">IP Address</th>
-              <th className="px-6 py-4 text-right">Timestamp</th>
+            <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 whitespace-nowrap">
+              <th className="px-6 py-4 whitespace-nowrap">Operator</th>
+              <th className="px-6 py-4 whitespace-nowrap">Action Type</th>
+              <th className="px-6 py-4 whitespace-nowrap">Audit Details</th>
+              <th className="px-6 py-4 whitespace-nowrap">IP Address</th>
+              <th className="px-6 py-4 text-right whitespace-nowrap">Timestamp</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/20 font-mono text-xs">
             {logs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground font-sans">
+                <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground font-sans whitespace-nowrap">
                   No audit log entries recorded.
                 </td>
               </tr>
             ) : (
               logs.map((log) => (
-                <tr key={log.id} className="hover:bg-muted/10 transition-all">
-                  <td className="px-6 py-4 font-sans">
+                <tr key={log.id} className="hover:bg-muted/10 transition-all whitespace-nowrap">
+                  <td className="px-6 py-4 font-sans whitespace-nowrap">
                     <div className="text-left">
                       <p className="font-semibold text-xs text-foreground">{log.user?.name}</p>
                       <p className="text-[10px] text-muted-foreground font-mono">{log.user?.employeeId} ({log.user?.role?.toLowerCase()})</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex rounded-full bg-primary/10 text-primary-hover px-2.5 py-0.5 text-[9px] font-bold uppercase">
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-sans text-xs text-muted-foreground max-w-sm truncate" title={log.details}>
+                  <td className="px-6 py-4 font-sans text-xs text-muted-foreground max-w-sm truncate whitespace-nowrap" title={log.details}>
                     {log.details}
                   </td>
-                  <td className="px-6 py-4 font-mono text-muted-foreground">{log.ipAddress || 'Internal'}</td>
-                  <td className="px-6 py-4 text-right text-muted-foreground">
+                  <td className="px-6 py-4 font-mono text-muted-foreground whitespace-nowrap">{log.ipAddress || 'Internal'}</td>
+                  <td className="px-6 py-4 text-right text-muted-foreground whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                 </tr>
