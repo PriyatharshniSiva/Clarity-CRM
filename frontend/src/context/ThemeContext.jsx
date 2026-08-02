@@ -16,7 +16,8 @@ export const ThemeProvider = ({ children }) => {
       document.documentElement.setAttribute('data-theme', themeName);
     }
     const currentMode = mode !== undefined ? mode : themeMode;
-    if (currentMode === 'dark') {
+    const isDark = currentMode === 'dark' || themeName === 'dark-corporate';
+    if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');

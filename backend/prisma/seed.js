@@ -6,6 +6,32 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding complete, accurate Innovety CRM dataset...');
 
+  // 0. Super Admin User
+  const superAdminPass = await bcrypt.hash('SuperAdmin123!', 10);
+  await prisma.user.upsert({
+    where: { email: 'superadmin@enterprise-crm.com' },
+    update: {
+      employeeId: 'SUP-001',
+      name: 'Super Admin',
+      password: superAdminPass,
+      role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
+      department: 'Executive Board'
+    },
+    create: {
+      employeeId: 'SUP-001',
+      name: 'Super Admin',
+      email: 'superadmin@enterprise-crm.com',
+      password: superAdminPass,
+      dob: new Date('1985-01-01'),
+      role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
+      department: 'Executive Board',
+      phone: '9998887770',
+      joiningDate: new Date('2022-01-01')
+    }
+  });
+
   // 1. Admin User
   const adminPass = await bcrypt.hash('Admin123!', 10);
   await prisma.user.upsert({
@@ -13,6 +39,7 @@ async function main() {
     update: {
       employeeId: 'AD-0001',
       name: 'System Admin',
+      password: adminPass,
       role: 'ADMIN',
       status: 'ACTIVE',
       department: 'Management',

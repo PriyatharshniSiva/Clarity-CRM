@@ -131,8 +131,11 @@
     --background: 15, 23, 42 !important;
     --foreground: 241, 245, 249 !important;
     --card: 30, 41, 59 !important;
-    --card-foreground: 255, 255, 255 !important;
+    --card-foreground: 241, 245, 249 !important;
     --border: 51, 65, 85 !important;
+    --popover: 30, 41, 59 !important;
+    --muted: 30, 41, 59 !important;
+    --muted-foreground: 148, 163, 184 !important;
     --primary: 14, 165, 233 !important;
     --primary-hover: 56, 189, 248 !important;
     --primary-light: 15, 23, 42 !important;

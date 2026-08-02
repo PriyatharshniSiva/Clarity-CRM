@@ -28,6 +28,15 @@ const workLogRoutes = require('./routes/workLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const aiRoutes = require('./ai/aiRoutes');
 
+// Payroll Route modules
+const salaryTemplateRoutes = require('./routes/salaryTemplateRoutes');
+const salaryStructureRoutes = require('./routes/salaryStructureRoutes');
+const holidayRoutes = require('./routes/holidayRoutes');
+const payrollSettingsRoutes = require('./routes/payrollSettingsRoutes');
+const payrollRoutes = require('./routes/payrollRoutes');
+const payslipRoutes = require('./routes/payslipRoutes');
+const payrollReportRoutes = require('./routes/payrollReportRoutes');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -123,8 +132,10 @@ app.get('/api/download-file', authenticate, (req, res) => {
 });
 
 const superAdminRoutes = require('./routes/superAdminRoutes');
+const platformBuilderRoutes = require('./routes/platformBuilderRoutes');
 
 // Mount API routes
+app.use('/api/super-admin/platform-builder', platformBuilderRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.get('/api/platform/settings', async (req, res) => {
   try {
@@ -161,6 +172,15 @@ app.use('/api/task-dependencies', taskDependencyRoutes);
 app.use('/api/worklogs', workLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
+
+// Finance & Payroll API Endpoints
+app.use('/api/payroll/templates', salaryTemplateRoutes);
+app.use('/api/payroll/salary-structures', salaryStructureRoutes);
+app.use('/api/payroll/holidays', holidayRoutes);
+app.use('/api/payroll/settings', payrollSettingsRoutes);
+app.use('/api/payroll/payslips', payslipRoutes);
+app.use('/api/payroll/reports', payrollReportRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // Simple healthcheck / diagnostic
 app.get('/health', (req, res) => {

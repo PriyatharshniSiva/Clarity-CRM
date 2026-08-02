@@ -12,12 +12,18 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'User ID and password are required.' });
     }
 
-    // Search user by email OR employeeId (case-insensitive)
-    const user = await prisma.user.findFirst({
+    const cleanInput = String(loginInput).trim();
+    const noSpaceInput = cleanInput.replace(/\s+/g, '');
+
+    // Search user by email, employeeId, name, or id (case-insensitive & space-flexible)
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: { equals: loginInput.trim(), mode: 'insensitive' } },
-          { employeeId: { equals: loginInput.trim(), mode: 'insensitive' } }
+          { email: { equals: cleanInput, mode: 'insensitive' } },
+          { employeeId: { equals: cleanInput, mode: 'insensitive' } },
+          { name: { equals: cleanInput, mode: 'insensitive' } },
+          { name: { contains: cleanInput, mode: 'insensitive' } },
+          { id: { equals: cleanInput } }
         ]
       },
       include: {
@@ -26,6 +32,17 @@ const login = async (req, res) => {
         }
       }
     });
+
+    if (!user && noSpaceInput) {
+      const allUsers = await prisma.user.findMany({
+        include: { teamMembers: { include: { team: true } } }
+      });
+      user = allUsers.find(u =>
+        u.email.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase() ||
+        u.employeeId.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase() ||
+        u.name.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase()
+      );
+    }
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' });

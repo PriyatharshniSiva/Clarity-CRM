@@ -413,18 +413,6 @@ const Attendance = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase">Letter Subject</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Application for Work From Home / Sick Leave"
-                value={leaveForm.subject}
-                onChange={(e) => setLeaveForm({ ...leaveForm, subject: e.target.value, reason: e.target.value })}
-                className="text-xs border bg-background px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary w-full"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Formal Letter Content</label>
               </div>

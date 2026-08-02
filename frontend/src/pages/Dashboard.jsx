@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import UserAvatar from '../components/common/UserAvatar';
+import EmployeeDashboard from '../components/dashboard/EmployeeDashboard';
+import TeamLeaderDashboard from '../components/dashboard/TeamLeaderDashboard';
+import LeaveOverviewCard from '../components/dashboard/LeaveOverviewCard';
 import {
   Users,
   Briefcase,
@@ -69,23 +72,25 @@ const itemVariants = {
   }
 };
 
-// Helper for mini week strip date calculation
-const getWeekDays = () => {
+// Helper for 7-day rolling week calendar calculation (Previous 3 days -> Today -> Next 3 days)
+const getRollingWeekDays = () => {
   const today = new Date();
-  const currentDay = today.getDay(); // 0 is Sun, 1 is Mon
-  const distanceToMon = currentDay === 0 ? -6 : 1 - currentDay;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + distanceToMon);
-
   const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+
     days.push({
-      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
       dateNum: d.getDate(),
-      isToday: d.toDateString() === today.toDateString(),
-      fullDate: d
+      isToday: i === 0,
+      fullDate: d,
+      dateString: dateString
     });
   }
   return days;
@@ -93,6 +98,15 @@ const getWeekDays = () => {
 
 const Dashboard = () => {
   const { user } = useAuth();
+
+  if (user?.role === 'EMPLOYEE' || user?.role === 'INTERN') {
+    return <EmployeeDashboard />;
+  }
+
+  if (user?.role === 'TEAM_LEADER') {
+    return <TeamLeaderDashboard />;
+  }
+
   const { onlineUsers, notifications } = useSocket();
 
   const [timeFilter, setTimeFilter] = useState('1Y');
@@ -121,6 +135,7 @@ const Dashboard = () => {
   const [allTasks, setAllTasks] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [recentChatRooms, setRecentChatRooms] = useState([]);
+  const [leavesList, setLeavesList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Intern Clock-in/out state
@@ -129,145 +144,186 @@ const Dashboard = () => {
   const [attendanceAlert, setAttendanceAlert] = useState('');
   const [clockLoading, setClockLoading] = useState(false);
 
-  const weekDays = getWeekDays();
+  const [chartPrimaryColor, setChartPrimaryColor] = useState('rgb(var(--primary))');
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        const promises = [
-          api.get('/tasks'),
-          api.get('/tickets'),
-          api.get('/announcements'),
-          api.get('/chat/rooms')
-        ];
-
-        if (user.role === 'ADMIN') {
-          promises.push(api.get('/attendance/analytics'));
-          promises.push(api.get('/teams'));
-          promises.push(api.get('/users?limit=1000'));
-          promises.push(api.get('/logs?limit=8'));
-        }
-
-        const results = await Promise.all(promises.map(p => p.catch(() => ({ error: true, data: null }))));
-
-        const tasksData = results[0].data || [];
-        setAllTasks(tasksData);
-        const ticketsData = results[1].data || [];
-        const announcementsData = results[2].data || [];
-        setAnnouncements(announcementsData.slice(0, 4));
-        const assetsData = results[3].data || {};
-        setAssetStats({
-          totalAssets: assetsData.totalAssets || 0,
-          availableAssets: assetsData.availableAssets || 0,
-          assignedAssets: assetsData.assignedAssets || 0,
-          maintenanceAssets: assetsData.maintenanceAssets || 0
-        });
-        const chatRoomsData = results[4].data || [];
-        setRecentChatRooms(chatRoomsData);
-
-        let newStats = { ...stats };
-        
-        // Tasks Stats
-        const pending = tasksData.filter(t => ['PENDING', 'IN_PROGRESS', 'WAITING_FOR_REVIEW'].includes(t.status)).length;
-        const completed = tasksData.filter(t => t.status === 'APPROVED').length;
-        newStats.pendingTasks = pending;
-        newStats.completedTasks = completed;
-
-        // Tickets Stats
-        const openT = ticketsData.filter(t => ['OPEN', 'ASSIGNED', 'IN_PROGRESS'].includes(t.status)).length;
-        const closedT = ticketsData.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
-        newStats.openTickets = openT;
-        newStats.closedTickets = closedT;
-
-        if (user.role === 'ADMIN') {
-          const attendanceData = results[3].data || {};
-          const teamsData = results[4].data || [];
-          const usersData = results[5].data?.users || [];
-          const logsData = results[6].data?.logs || [];
-
-          newStats.totalMembers = usersData.filter(u => u.role === 'INTERN' || u.role === 'EMPLOYEE').length;
-          newStats.totalInterns = newStats.totalMembers;
-          newStats.totalLeaders = usersData.filter(u => u.role === 'TEAM_LEADER').length;
-          newStats.totalTeams = teamsData.length;
-          newStats.presentToday = attendanceData.presentToday || 0;
-          newStats.absentToday = attendanceData.absentToday || 0;
-          newStats.lateToday = attendanceData.lateToday || 0;
-          newStats.halfDayToday = attendanceData.halfDayToday || 0;
-
-          const totalActiveMembers = newStats.totalMembers;
-          if (totalActiveMembers > 0) {
-            const attending = newStats.presentToday + newStats.lateToday + newStats.halfDayToday;
-            newStats.attendanceRate = Math.round((attending / totalActiveMembers) * 100);
-          }
-
-          setActivities(logsData);
-          setTeamPerformances(teamsData.map(t => ({
-            name: t.name,
-            performance: t.performance || 0,
-            active: t.activeTasks || 0,
-            completed: t.completedTasks || 0
-          })));
-
-          // Chart data for tasks distribution
-          setTaskChartData([
-            { name: 'Pending', value: tasksData.filter(t => t.status === 'PENDING').length },
-            { name: 'In Progress', value: tasksData.filter(t => t.status === 'IN_PROGRESS').length },
-            { name: 'Review', value: tasksData.filter(t => t.status === 'WAITING_FOR_REVIEW').length },
-            { name: 'Approved', value: tasksData.filter(t => t.status === 'APPROVED').length },
-            { name: 'Rejected', value: tasksData.filter(t => t.status === 'REJECTED').length }
-          ]);
-
-          const totalPoints = tasksData.reduce((acc, t) => acc + (t.storyPoints || 0), 0);
-          const completedPoints = tasksData.filter(t => t.status === 'APPROVED').reduce((acc, t) => acc + (t.storyPoints || 0), 0);
-          setSprintStats({
-            totalPoints,
-            completedPoints,
-            pendingPoints: totalPoints - completedPoints
-          });
-
-          const burndown = [];
-          const days = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10'];
-          days.forEach((day, idx) => {
-            const ideal = Math.max(0, Math.round(totalPoints - (totalPoints / (days.length - 1)) * idx));
-            let actual = totalPoints;
-            if (idx > 0) {
-              const step = completedPoints / (days.length - 1);
-              actual = Math.max(totalPoints - completedPoints, Math.round(totalPoints - step * idx));
-            }
-            if (idx === days.length - 1) {
-              actual = totalPoints - completedPoints;
-            }
-            burndown.push({
-              name: day,
-              Ideal: ideal,
-              Remaining: actual
-            });
-          });
-          setBurndownChartData(burndown);
-        } else {
-          setTaskChartData([
-            { name: 'Open Tasks', value: pending },
-            { name: 'Completed', value: completed }
-          ]);
-        }
-
-        setStats(newStats);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-        setLoading(false);
+    const updateThemeColor = () => {
+      const computed = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+      if (computed) {
+        setChartPrimaryColor(computed.includes(',') || computed.includes(' ') ? `rgb(${computed})` : computed);
       }
     };
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+    return () => observer.disconnect();
+  }, []);
 
+  const todayDateStr = useMemo(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const [selectedDate, setSelectedDate] = useState(todayDateStr);
+  const rollingWeekDays = getRollingWeekDays();
+
+  const isTodaySelected = selectedDate === todayDateStr;
+
+  const dayTasks = useMemo(() => {
+    const matched = allTasks.filter((task) => {
+      const rawDate = task.deadline || task.dueDate;
+      if (rawDate) {
+        const d = new Date(rawDate);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}` === selectedDate;
+      }
+      return isTodaySelected;
+    });
+
+    if (isTodaySelected && matched.length === 0) {
+      return allTasks;
+    }
+    return matched;
+  }, [allTasks, selectedDate, isTodaySelected]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      const promises = [
+        api.get('/tasks'),
+        api.get('/tickets'),
+        api.get('/announcements'),
+        api.get('/chat/rooms'),
+        api.get('/leaves')
+      ];
+
+      if (user.role === 'ADMIN') {
+        promises.push(api.get('/attendance/analytics'));
+        promises.push(api.get('/teams'));
+        promises.push(api.get('/users?limit=1000'));
+        promises.push(api.get('/logs?limit=8'));
+      }
+
+      const results = await Promise.all(promises.map(p => p.catch(() => ({ error: true, data: null }))));
+
+      const tasksData = results[0].data || [];
+      setAllTasks(tasksData);
+      const ticketsData = results[1].data || [];
+      const announcementsData = results[2].data || [];
+      setAnnouncements(announcementsData.slice(0, 4));
+      const chatRoomsData = results[3].data || [];
+      setRecentChatRooms(chatRoomsData);
+      const leavesData = Array.isArray(results[4]?.data) ? results[4].data : [];
+      setLeavesList(leavesData);
+
+      let newStats = { ...stats };
+
+      // Tasks Stats
+      const pending = tasksData.filter(t => ['PENDING', 'IN_PROGRESS', 'WAITING_FOR_REVIEW'].includes(t.status)).length;
+      const completed = tasksData.filter(t => t.status === 'APPROVED').length;
+      newStats.pendingTasks = pending;
+      newStats.completedTasks = completed;
+
+      // Tickets Stats
+      const openT = ticketsData.filter(t => ['OPEN', 'ASSIGNED', 'IN_PROGRESS'].includes(t.status)).length;
+      const closedT = ticketsData.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
+      newStats.openTickets = openT;
+      newStats.closedTickets = closedT;
+
+      if (user.role === 'ADMIN') {
+        const attendanceData = results[3].data || {};
+        const teamsData = results[4].data || [];
+        const usersData = results[5].data?.users || [];
+        const logsData = results[6].data?.logs || [];
+
+        newStats.totalMembers = usersData.filter(u => u.role === 'INTERN' || u.role === 'EMPLOYEE').length;
+        newStats.totalInterns = newStats.totalMembers;
+        newStats.totalLeaders = usersData.filter(u => u.role === 'TEAM_LEADER').length;
+        newStats.totalTeams = teamsData.length;
+        newStats.presentToday = attendanceData.presentToday || 0;
+        newStats.absentToday = attendanceData.absentToday || 0;
+        newStats.lateToday = attendanceData.lateToday || 0;
+        newStats.halfDayToday = attendanceData.halfDayToday || 0;
+
+        const totalActiveMembers = newStats.totalMembers;
+        if (totalActiveMembers > 0) {
+          const attending = newStats.presentToday + newStats.lateToday + newStats.halfDayToday;
+          newStats.attendanceRate = Math.round((attending / totalActiveMembers) * 100);
+        }
+
+        setActivities(logsData);
+        setTeamPerformances(teamsData.map(t => ({
+          name: t.name,
+          performance: t.performance || 0,
+          active: t.activeTasks || 0,
+          completed: t.completedTasks || 0
+        })));
+
+        // Chart data for tasks distribution
+        setTaskChartData([
+          { name: 'Pending', value: tasksData.filter(t => t.status === 'PENDING').length },
+          { name: 'In Progress', value: tasksData.filter(t => t.status === 'IN_PROGRESS').length },
+          { name: 'Review', value: tasksData.filter(t => t.status === 'WAITING_FOR_REVIEW').length },
+          { name: 'Approved', value: tasksData.filter(t => t.status === 'APPROVED').length },
+          { name: 'Rejected', value: tasksData.filter(t => t.status === 'REJECTED').length }
+        ]);
+
+        const totalPoints = tasksData.reduce((acc, t) => acc + (t.storyPoints || 0), 0);
+        const completedPoints = tasksData.filter(t => t.status === 'APPROVED').reduce((acc, t) => acc + (t.storyPoints || 0), 0);
+        setSprintStats({
+          totalPoints,
+          completedPoints,
+          pendingPoints: totalPoints - completedPoints
+        });
+
+        const burndown = [];
+        const days = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10'];
+        days.forEach((day, idx) => {
+          const ideal = Math.max(0, Math.round(totalPoints - (totalPoints / (days.length - 1)) * idx));
+          let actual = totalPoints;
+          if (idx > 0) {
+            const step = completedPoints / (days.length - 1);
+            actual = Math.max(totalPoints - completedPoints, Math.round(totalPoints - step * idx));
+          }
+          if (idx === days.length - 1) {
+            actual = totalPoints - completedPoints;
+          }
+          burndown.push({
+            name: day,
+            Ideal: ideal,
+            Remaining: actual
+          });
+        });
+        setBurndownChartData(burndown);
+      } else {
+        setTaskChartData([
+          { name: 'Open Tasks', value: pending },
+          { name: 'Completed', value: completed }
+        ]);
+      }
+
+      setStats(newStats);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, [user]);
 
   useEffect(() => {
     if (user && (user.role === 'INTERN' || user.role === 'EMPLOYEE' || user.role === 'TEAM_LEADER')) {
       const timer = setInterval(() => setTime(new Date()), 1000);
-      
+
       const fetchTodayAttendance = async () => {
         try {
           const res = await api.get('/attendance/logs');
@@ -281,7 +337,7 @@ const Dashboard = () => {
           console.error('Failed to fetch today attendance on dashboard:', err);
         }
       };
-      
+
       fetchTodayAttendance();
       return () => clearInterval(timer);
     }
@@ -352,7 +408,7 @@ const Dashboard = () => {
   }
 
   // Calculate average for bar chart reference line
-  const avgChartValue = taskChartData.length > 0 
+  const avgChartValue = taskChartData.length > 0
     ? Math.round(taskChartData.reduce((acc, curr) => acc + curr.value, 0) / taskChartData.length)
     : 0;
 
@@ -376,11 +432,10 @@ const Dashboard = () => {
               <div className="flex items-center gap-2">
                 <h3 className={`font-bold text-foreground ${isCompact ? 'text-sm' : 'text-base'}`}>Attendance Clock Portal</h3>
                 {isCompact && (
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
-                    isCompleted
-                      ? 'bg-primary/10 text-primary border-primary/20'
-                      : 'bg-primary text-white border-primary-hover shadow-2xs'
-                  }`}>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${isCompleted
+                    ? 'bg-primary/10 text-primary border-primary/20'
+                    : 'bg-primary text-white border-primary-hover shadow-2xs'
+                    }`}>
                     {isCompleted ? 'Shift Completed' : 'Checked In / Active'}
                   </span>
                 )}
@@ -432,11 +487,10 @@ const Dashboard = () => {
         )}
 
         {attendanceAlert && (
-          <div className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
-            attendanceAlert.includes('failed') || attendanceAlert.includes('denied')
-              ? 'bg-rose-500/10 border-rose-500/20 text-rose-600'
-              : 'bg-primary/10 border-primary/20 text-primary'
-          }`}>
+          <div className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${attendanceAlert.includes('failed') || attendanceAlert.includes('denied')
+            ? 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+            : 'bg-primary/10 border-primary/20 text-primary'
+            }`}>
             <span>{attendanceAlert}</span>
           </div>
         )}
@@ -487,7 +541,7 @@ const Dashboard = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6 pb-8"
       variants={containerVariants}
       initial="hidden"
@@ -595,6 +649,13 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
+      {/* Leave Overview Summary Ticker Card */}
+      {['ADMIN', 'TEAM_LEADER', 'SUPER_ADMIN'].includes(user.role) && (
+        <motion.div variants={itemVariants}>
+          <LeaveOverviewCard leaves={leavesList} onRefresh={fetchDashboardData} />
+        </motion.div>
+      )}
+
       {/* 2.5. Activity Assigned Card — Clean SaaS Pattern */}
       <motion.div variants={itemVariants} className="clean-card text-left space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -686,7 +747,7 @@ const Dashboard = () => {
           {/* Column 3: 2 Stacked Items (Email & Note equivalent) */}
           <div className="grid grid-rows-2 gap-4">
             {/* Top Item */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-emerald-950/10 border border-emerald-900/10 dark:border-emerald-800/20 flex flex-col justify-between space-y-2">
+            <div className="p-4 rounded-2xl bg-card border border-border/30 flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-muted-foreground">Audit & System Logs</span>
                 <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
@@ -729,7 +790,7 @@ const Dashboard = () => {
 
       {/* 4. Two-Column Card Row (Chart Card Left + Schedule/List Card Right) */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-        
+
         {/* Left Column: Smooth Area Chart matching reference screenshot with Real CRM Data */}
         <div className="clean-card lg:col-span-2 text-left space-y-6">
           <div>
@@ -755,11 +816,10 @@ const Dashboard = () => {
                   <button
                     key={range}
                     onClick={() => setTimeFilter(range)}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      timeFilter === range
-                        ? 'bg-primary text-white font-bold shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
+                    className={`px-3 py-1 rounded-lg transition-all ${timeFilter === range
+                      ? 'bg-primary text-white font-bold shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
                   >
                     {range}
                   </button>
@@ -770,41 +830,41 @@ const Dashboard = () => {
             {/* Recharts AreaChart with real CRM task data */}
             <div className="h-72 w-full mt-6">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart 
+                <AreaChart
                   data={
-                    taskChartData && taskChartData.length > 0 
+                    taskChartData && taskChartData.length > 0
                       ? taskChartData.map(item => ({ label: item.name || item.label, value: item.value || 0 }))
                       : [
-                          { label: 'Pending', value: stats.pendingTasks },
-                          { label: 'Completed', value: stats.completedTasks }
-                        ]
-                  } 
+                        { label: 'Pending', value: stats.pendingTasks },
+                        { label: 'Completed', value: stats.completedTasks }
+                      ]
+                  }
                   margin={{ top: 15, right: 10, left: -15, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient id="areaColorGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor={chartPrimaryColor} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={chartPrimaryColor} stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(226, 234, 230, 0.5)" />
-                  <XAxis 
-                    dataKey="label" 
-                    stroke="currentColor" 
-                    className="text-xs font-medium text-muted-foreground" 
-                    tickLine={false} 
-                    axisLine={false} 
+                  <XAxis
+                    dataKey="label"
+                    stroke="currentColor"
+                    className="text-xs font-medium text-muted-foreground"
+                    tickLine={false}
+                    axisLine={false}
                   />
-                  <YAxis 
-                    stroke="currentColor" 
-                    className="text-xs font-medium text-muted-foreground" 
-                    tickLine={false} 
-                    axisLine={false} 
+                  <YAxis
+                    stroke="currentColor"
+                    className="text-xs font-medium text-muted-foreground"
+                    tickLine={false}
+                    axisLine={false}
                     allowDecimals={false}
-                    tickFormatter={(val) => Math.round(val)} 
+                    tickFormatter={(val) => Math.round(val)}
                   />
-                  <Tooltip 
-                    cursor={{ stroke: '#64748B', strokeWidth: 1, strokeDasharray: '3 3' }}
+                  <Tooltip
+                    cursor={{ stroke: chartPrimaryColor, strokeWidth: 1, strokeDasharray: '3 3' }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const dataPoint = payload[0].payload;
@@ -818,13 +878,13 @@ const Dashboard = () => {
                       return null;
                     }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="var(--primary)" 
-                    strokeWidth={2.5} 
-                    fillOpacity={1} 
-                    fill="url(#areaColorGradient)" 
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={chartPrimaryColor}
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#areaColorGradient)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -849,12 +909,12 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(226, 234, 230, 0.6)" />
                     <XAxis dataKey="name" stroke="currentColor" className="text-xs font-semibold text-muted-foreground" tickLine={false} />
                     <YAxis stroke="currentColor" className="text-xs font-semibold text-muted-foreground" tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0B1528', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' }} 
-                      labelStyle={{ color: 'var(--primary)', fontWeight: 'bold' }}
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0B1528', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' }}
+                      labelStyle={{ color: chartPrimaryColor, fontWeight: 'bold' }}
                     />
                     <Line type="monotone" dataKey="Ideal" stroke="#94A3B8" strokeDasharray="5 5" strokeWidth={2} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="Remaining" stroke="var(--primary)" strokeWidth={3} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="Remaining" stroke={chartPrimaryColor} strokeWidth={3} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -916,128 +976,152 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* 2. Schedule & Deliverables Card */}
+          {/* 2. Schedule & Deliverables Card (7-Day Rolling Window) */}
           <div className="clean-card text-left space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-foreground">Schedule & Deliverables</h3>
-            <span className="text-[11px] font-extrabold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
-              This Week
-            </span>
-          </div>
-
-          {/* Mini Week-Strip Date Selector */}
-          <div className="grid grid-cols-7 gap-1 text-center py-2 bg-card rounded-2xl p-2 border border-border/40">
-            {weekDays.map((wd, i) => (
-              <div 
-                key={i} 
-                className={`py-2 px-1 rounded-xl transition-all ${
-                  wd.isToday 
-                    ? 'bg-primary text-white font-extrabold shadow-md shadow-primary/25 scale-105' 
-                    : 'hover:bg-muted text-muted-foreground font-semibold'
-                }`}
-              >
-                <span className="text-[10px] block uppercase">{wd.dayName}</span>
-                <span className="text-sm font-bold block mt-0.5">{wd.dateNum}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* "Today" Section with Colored Left-Accent List Items */}
-          <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
-                Today's Queue
-              </span>
-              {allTasks.length > 0 && (
-                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                  {allTasks.length} {allTasks.length === 1 ? 'Task' : 'Tasks'} Today
+              <div className="flex items-center gap-2">
+                {!isTodaySelected && (
+                  <button
+                    onClick={() => setSelectedDate(todayDateStr)}
+                    className="text-[10px] font-extrabold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-0.5 rounded-full border border-primary/20 transition-all cursor-pointer"
+                  >
+                    Reset to Today
+                  </button>
+                )}
+                <span className="text-[11px] font-extrabold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
+                  Rolling 7 Days
                 </span>
-              )}
+              </div>
             </div>
 
-            <div className="max-h-[82px] overflow-y-auto space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-emerald-500/30 scrollbar-track-transparent scroll-smooth snap-y snap-mandatory">
-              {allTasks.length > 0 ? (
-                [...allTasks]
-                  .sort((a, b) => {
-                    const statusOrder = {
-                      IN_PROGRESS: 1,
-                      WAITING_FOR_REVIEW: 2,
-                      PENDING: 3,
-                      TODO: 4,
-                      COMPLETED: 5
-                    };
-                    const orderA = statusOrder[a.status] || 99;
-                    const orderB = statusOrder[b.status] || 99;
-                    if (orderA !== orderB) return orderA - orderB;
-                    return new Date(a.deadline || a.dueDate || 0) - new Date(b.deadline || b.dueDate || 0);
-                  })
-                  .map((task, idx) => {
-                    // Tonal green left accents (Deep green, Mid green, Pale mint)
-                    const accentStyles = [
-                      'border-l-4 border-primary bg-primary/5 text-foreground',
-                      'border-l-4 border-primary/70 bg-primary/5 text-foreground',
-                      'border-l-4 border-primary/40 bg-primary/5 text-foreground'
-                    ];
-                    const chipStyles = [
-                      'bg-primary text-white',
-                      'bg-primary/20 text-primary',
-                      'bg-primary/10 text-primary'
-                    ];
+            {/* Mini 7-Day Rolling Strip Date Selector */}
+            <div className="grid grid-cols-7 gap-1 text-center py-2 bg-card rounded-2xl p-1.5 border border-border/40">
+              {rollingWeekDays.map((wd, i) => {
+                const isSelected = wd.dateString === selectedDate;
+                const isToday = wd.isToday;
 
-                    const accentClass = accentStyles[idx % accentStyles.length];
-                    const chipClass = chipStyles[idx % chipStyles.length];
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedDate(wd.dateString)}
+                    className={`py-2 px-1 rounded-xl transition-all cursor-pointer flex flex-col items-center justify-center ${
+                      isToday
+                        ? isSelected
+                          ? 'bg-primary text-white font-extrabold shadow-md shadow-primary/30 scale-105 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900'
+                          : 'bg-primary/90 text-white font-extrabold shadow-sm'
+                        : isSelected
+                        ? 'bg-primary/15 text-primary font-extrabold border-2 border-primary shadow-2xs'
+                        : 'hover:bg-muted text-muted-foreground font-semibold border border-transparent'
+                    }`}
+                  >
+                    <span className="text-[10px] block uppercase font-mono tracking-wider">
+                      {wd.dayName}
+                    </span>
+                    <span className="text-sm font-bold block mt-0.5 font-sans">
+                      {wd.dateNum}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                    return (
-                      <div 
-                        key={task.id} 
-                        className={`p-3.5 rounded-r-2xl rounded-l-md border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0 min-h-[72px] transition-all hover:shadow-sm ${accentClass}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl shrink-0 ${chipClass}`}>
-                            <Briefcase className="h-4 w-4" />
+            {/* Tasks Section for Selected Date */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+                  {isTodaySelected ? "Today's Queue" : `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })} Queue`}
+                </span>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                  {dayTasks.length} {dayTasks.length === 1 ? 'Task' : 'Tasks'}
+                </span>
+              </div>
+
+              <div className="max-h-[220px] overflow-y-auto space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-emerald-500/30 scrollbar-track-transparent scroll-smooth snap-y snap-mandatory">
+                {dayTasks.length > 0 ? (
+                  [...dayTasks]
+                    .sort((a, b) => {
+                      const statusOrder = {
+                        IN_PROGRESS: 1,
+                        WAITING_FOR_REVIEW: 2,
+                        PENDING: 3,
+                        TODO: 4,
+                        APPROVED: 5,
+                        COMPLETED: 5
+                      };
+                      const orderA = statusOrder[a.status] || 99;
+                      const orderB = statusOrder[b.status] || 99;
+                      if (orderA !== orderB) return orderA - orderB;
+                      return new Date(a.deadline || a.dueDate || 0) - new Date(b.deadline || b.dueDate || 0);
+                    })
+                    .map((task, idx) => {
+                      // Tonal green left accents
+                      const accentStyles = [
+                        'border-l-4 border-primary bg-primary/5 text-foreground',
+                        'border-l-4 border-primary/70 bg-primary/5 text-foreground',
+                        'border-l-4 border-primary/40 bg-primary/5 text-foreground'
+                      ];
+                      const chipStyles = [
+                        'bg-primary text-white',
+                        'bg-primary/20 text-primary',
+                        'bg-primary/10 text-primary'
+                      ];
+
+                      const accentClass = accentStyles[idx % accentStyles.length];
+                      const chipClass = chipStyles[idx % chipStyles.length];
+
+                      return (
+                        <div
+                          key={task.id}
+                          className={`p-3.5 rounded-r-2xl rounded-l-md border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0 transition-all hover:shadow-sm ${accentClass}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl shrink-0 ${chipClass}`}>
+                              <Briefcase className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                              <h4 className="text-xs font-bold line-clamp-1">{task.title}</h4>
+                              <span className="text-[10px] opacity-80 font-medium block mt-0.5">
+                                Due: {task.dueDate || task.deadline ? new Date(task.dueDate || task.deadline).toLocaleDateString() : 'Scheduled'}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-bold line-clamp-1">{task.title}</h4>
-                            <span className="text-[10px] opacity-80 font-medium block mt-0.5">
-                              Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Today'}
-                            </span>
-                          </div>
+                          <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 shadow-2xs border border-border/30 shrink-0">
+                            {task.status?.replace(/_/g, ' ')}
+                          </span>
                         </div>
-                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 shadow-2xs border border-border/30 shrink-0">
-                          {task.status?.replace(/_/g, ' ')}
+                      );
+                    })
+                ) : (
+                  <div className="p-4 text-center text-xs text-muted-foreground rounded-2xl bg-muted/20 border border-dashed border-border">
+                    No tasks scheduled for {isTodaySelected ? 'today' : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
+                  </div>
+                )}
+
+                {/* Announcements Item as List Accent */}
+                {announcements.length > 0 && isTodaySelected && (
+                  <div className="p-3.5 rounded-r-2xl rounded-l-md border-l-4 border-primary bg-primary/5 border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl shrink-0 bg-primary text-white">
+                        <Megaphone className="h-4 w-4" />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-xs font-bold text-foreground line-clamp-1">{announcements[0].title}</h4>
+                        <span className="text-[10px] text-muted-foreground font-medium block mt-0.5">
+                          Team Announcement
                         </span>
                       </div>
-                    );
-                  })
-              ) : (
-                <div className="p-4 text-center text-xs text-muted-foreground rounded-2xl bg-muted/20 border border-dashed border-border">
-                  No active tasks for today.
-                </div>
-              )}
-
-              {/* Announcements Item as List Accent */}
-              {announcements.length > 0 && (
-                <div className="p-3.5 rounded-r-2xl rounded-l-md border-l-4 border-primary bg-primary/5 border border-border/30 flex items-center justify-between gap-3 snap-start shrink-0 min-h-[72px]">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl shrink-0 bg-primary text-white">
-                      <Megaphone className="h-4 w-4" />
                     </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground line-clamp-1">{announcements[0].title}</h4>
-                      <span className="text-[10px] text-muted-foreground font-medium block mt-0.5">
-                        Team Announcement
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      Info
+                    </span>
                   </div>
-                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
-                    Info
-                  </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       </motion.div>
 
@@ -1089,8 +1173,8 @@ const Dashboard = () => {
                     <span className="text-primary font-mono">{team.performance}% Completed</span>
                   </div>
                   <div className="h-2 w-full bg-primary/10 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all duration-500" 
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
                       style={{ width: `${Math.max(team.performance, 5)}%` }}
                     />
                   </div>

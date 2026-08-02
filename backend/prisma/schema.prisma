@@ -141,7 +141,11 @@ model User {
   designation      String?
   totalExperience  String?
   notificationPreferences Json?
-  createdAt        DateTime         @default(now())
+  customData              Json?
+  casualLeaveQuota        Int              @default(12)
+  sickLeaveQuota          Int              @default(12)
+  emergencyLeaveQuota     Int              @default(6)
+  createdAt               DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   // Relationships
@@ -174,6 +178,13 @@ model User {
   projectHistory           ProjectHistory[]  @relation("ProjectHistoryUser")
   workLogs                 WorkLog[]
   aiFeedbacks              AIFeedback[]
+  createdFormVersions      CustomFormVersion[]
+  performedBuilderHistory  BuilderHistory[]
+  salaryStructure          SalaryStructure?  @relation("UserSalaryStructure")
+  salaryRevisions          SalaryRevision[]  @relation("UserSalaryRevisions")
+  performedRevisions       SalaryRevision[]  @relation("RevisedByRevisions")
+  payslips                 Payslip[]         @relation("UserPayslips")
+  processedBatches         PayrollBatch[]    @relation("ProcessedBatches")
 }
 
 model Team {
@@ -481,20 +492,37 @@ model Repository {
 }
 
 model LeaveRequest {
-  id           String   @id @default(uuid())
-  userId       String
-  startDate    DateTime
-  endDate      DateTime
-  subject      String?
-  letterContent String?
-  reason       String
-  contactPhone String?
-  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  type         String   @default("LEAVE")   // LEAVE, WFH
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  userId              String
+  startDate           DateTime
+  endDate             DateTime
+  totalDays           Float    @default(1.0)
+  leaveType           String   @default("CASUAL") // CASUAL, SICK, EMERGENCY, WFH
+  type                String   @default("LEAVE")   // LEAVE, WFH
+  subject             String?
+  letterContent       String?
+  reason              String
+  contactPhone        String?
+  
+  // Status Workflow
+  status              String   @default("PENDING_TL_APPROVAL") // PENDING_TL_APPROVAL, PENDING_ADMIN_APPROVAL, APPROVED, REJECTED, CANCELLED
 
-  user         User     @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
+  // Step 1: Team Leader Review
+  tlApprovalStatus    String   @default("PENDING") // PENDING, APPROVED, REJECTED, NOT_REQUIRED
+  tlApprovedById      String?
+  tlApprovedAt        DateTime?
+  tlRemarks           String?
+
+  // Step 2: Admin Final Sanction
+  adminApprovalStatus String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminApprovedById   String?
+  adminApprovedAt     DateTime?
+  adminRemarks        String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
@@ -744,3 +772,321 @@ model MessageRead {
 
   @@unique([messageId, userId])
 }
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  EMAIL
+  PHONE
+  NUMBER
+  DATE
+  TIME
+  DATETIME
+  DROPDOWN
+  MULTISELECT
+  CHECKBOX
+  RADIO
+  FILE
+  IMAGE
+  URL
+  PASSWORD
+  COLOR
+  RATING
+  SWITCH
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PlatformEntityType {
+  USER_PROFILE
+  INTERN_PROFILE
+  EMPLOYEE_PROFILE
+  TEAM_LEADER_PROFILE
+  ADMIN_PROFILE
+  REGISTRATION
+  PROJECT
+  TASK
+  ATTENDANCE
+  LEAVE
+  HELPDESK
+  ANNOUNCEMENT
+  ASSET
+  WORKLOG
+  TEAM
+  CLIENT
+}
+
+model CustomFormField {
+  id                 String             @id @default(uuid())
+  entityType         PlatformEntityType
+  fieldKey           String
+  label              String
+  placeholder        String?
+  fieldType          FieldType          @default(TEXT)
+  options            Json?              // Array of string options
+  visibleTo          Json               // Array of roles
+  editableBy         Json               // Array of roles
+  requiredFor        Json               // Array of roles
+
+  // Dynamic Validation Rules
+  minLength          Int?
+  maxLength          Int?
+  minVal             Float?
+  maxVal             Float?
+  regexPattern       String?
+  defaultValue       String?
+  isUnique           Boolean            @default(false)
+  isReadOnly         Boolean            @default(false)
+  isHidden           Boolean            @default(false)
+  isDisabled         Boolean            @default(false)
+
+  // Conditional Visibility Rules
+  dependsOnField     String?
+  dependsOnOperator  String?            // EQUALS, NOT_EQUALS, CONTAINS, GREATER_THAN, LESS_THAN, IN, IS_NOT_EMPTY
+  dependsOnValue     String?
+
+  isSystemDefault    Boolean            @default(false)
+  order              Int                @default(0)
+  versionId          String?
+  version            CustomFormVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([entityType, fieldKey, versionId])
+}
+
+model CustomFormVersion {
+  id          String             @id @default(uuid())
+  entityType  PlatformEntityType
+  version     Int                @default(1)
+  status      FormStatus         @default(DRAFT)
+  createdById String
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  fields      CustomFormField[]
+  publishedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([entityType, version])
+}
+
+model DynamicMenu {
+  id         String        @id @default(uuid())
+  role       Role
+  menuKey    String
+  label      String
+  icon       String?
+  route      String
+  permission String?
+  badge      String?
+  order      Int           @default(0)
+  isVisible  Boolean       @default(true)
+  parentId   String?
+  parent     DynamicMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children   DynamicMenu[] @relation("MenuHierarchy")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([role, menuKey])
+}
+
+model BuilderHistory {
+  id            String              @id @default(uuid())
+  performedById String
+  performedBy   User                @relation(fields: [performedById], references: [id])
+  builderType   String              // FORM, MENU
+  entityType    PlatformEntityType?
+  action        String              // SAVE_DRAFT, PUBLISH, ROLLBACK
+  oldSnapshot   Json?
+  newSnapshot   Json?
+  details       String
+  createdAt     DateTime            @default(now())
+}
+
+enum PayrollBatchStatus {
+  DRAFT
+  PREVIEW
+  LOCKED
+  REVIEW
+  PUBLISHED
+  COMPLETED
+  ROLLED_BACK
+}
+
+enum HolidayType {
+  NATIONAL
+  COMPANY
+  WEEKEND
+}
+
+model SalaryTemplate {
+  id               String            @id @default(uuid())
+  name             String            @unique // e.g. "Default Employee", "Senior Employee", "Manager", "Intern Stipend"
+  description      String?
+  targetRole       Role              @default(EMPLOYEE)
+  basicSalary      Float             @default(0)
+  hra              Float             @default(0)
+  da               Float             @default(0)
+  specialAllowance Float             @default(0)
+  travelAllowance  Float             @default(0)
+  medicalAllowance Float             @default(0)
+  otherAllowances  Float             @default(0)
+  bonus            Float             @default(0)
+  
+  pfRatePercent    Float             @default(12.0)
+  esiRatePercent   Float             @default(0.75)
+  profTax          Float             @default(200.0)
+  incomeTaxPercent Float             @default(5.0)
+  otherDeductions  Float             @default(0)
+  
+  isDefault        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  structures       SalaryStructure[]
+}
+
+model SalaryStructure {
+  id               String          @id @default(uuid())
+  userId           String          @unique
+  templateId       String?
+  
+  basicSalary      Float           @default(0)
+  hra              Float           @default(0)
+  da               Float           @default(0)
+  specialAllowance Float           @default(0)
+  travelAllowance  Float           @default(0)
+  medicalAllowance Float           @default(0)
+  otherAllowances  Float           @default(0)
+  bonus            Float           @default(0)
+  
+  pfDeduction      Float           @default(0)
+  esiDeduction     Float           @default(0)
+  profTax          Float           @default(200.0)
+  incomeTax        Float           @default(0)
+  otherDeductions  Float           @default(0)
+  
+  grossSalary      Float           @default(0)
+  netSalary        Float           @default(0)
+  
+  effectiveFrom    DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user             User            @relation("UserSalaryStructure", fields: [userId], references: [id], onDelete: Cascade)
+  template         SalaryTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+}
+
+model SalaryRevision {
+  id             String   @id @default(uuid())
+  userId         String
+  previousSalary Float
+  newSalary      Float
+  revisionType   String   // PROMOTION, INCREMENT, REGULAR
+  changeAmount   Float
+  effectiveDate  DateTime @default(now())
+  reason         String
+  revisedById    String
+  createdAt      DateTime @default(now())
+
+  user           User     @relation("UserSalaryRevisions", fields: [userId], references: [id], onDelete: Cascade)
+  revisedBy      User     @relation("RevisedByRevisions", fields: [revisedById], references: [id], onDelete: Cascade)
+}
+
+model HolidayCalendar {
+  id               String      @id @default(uuid())
+  title            String
+  date             DateTime    @unique @db.Date
+  type             HolidayType @default(COMPANY)
+  isWorkingHoliday Boolean     @default(false)
+  payMultiplier    Float       @default(2.0) // 2.0x for Holiday, 1.5x for Weekend
+  remarks          String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model PayrollSettings {
+  id                    String   @id @default("GLOBAL")
+  cycleStartDay         Int      @default(1)
+  payDay                Int      @default(30)
+  currency              String   @default("INR")
+  overtimeHourlyRate    Float    @default(150.0)
+  holidayPayMultiplier  Float    @default(2.0)
+  weekendPayMultiplier  Float    @default(1.5)
+  lateDeductionRule     String   @default("FLAT_RATE") // FLAT_RATE, PERCENTAGE
+  lateDeductionRate     Float    @default(100.0)
+  halfDayDeductionRate  Float    @default(0.5)
+  minimumWorkingHours   Float    @default(4.0)
+  roundingRule          String   @default("ROUND_HALF_UP")
+  payslipTemplate       String   @default("STANDARD")
+  companyName           String   @default("MRF Innovation Park Enterprise")
+  companyLogo           String?
+  companyAddress        String   @default("100 Innovation Towers, Cyber City, Bangalore - 560001")
+  authorizedSignature   String   @default("Authorized HR Signatory")
+  updatedAt             DateTime @updatedAt
+}
+
+model PayrollBatch {
+  id              String             @id @default(uuid())
+  month           Int                // 1 to 12
+  year            Int                // e.g. 2026
+  status          PayrollBatchStatus @default(DRAFT)
+  totalEmployees  Int                @default(0)
+  totalGross      Float              @default(0)
+  totalDeductions Float              @default(0)
+  totalNet        Float              @default(0)
+  processedById   String
+  lockedAt        DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  processedBy     User               @relation("ProcessedBatches", fields: [processedById], references: [id], onDelete: Cascade)
+  payslips        Payslip[]
+
+  @@unique([month, year])
+}
+
+model Payslip {
+  id                 String             @id @default(uuid())
+  batchId            String
+  userId             String
+  month              Int
+  year               Int
+  
+  basicSalary        Float              @default(0)
+  hra                Float              @default(0)
+  da                 Float              @default(0)
+  allowancesJson     Json?              // Itemized allowances
+  deductionsJson     Json?              // Itemized deductions
+  grossSalary        Float              @default(0)
+  netSalary          Float              @default(0)
+  
+  workingDays        Int                @default(30)
+  presentDays        Float              @default(0)
+  paidLeaveDays      Float              @default(0)
+  unpaidAbsentDays   Float              @default(0)
+  wfhDays            Float              @default(0)
+  overtimeHours      Float              @default(0)
+  overtimePay        Float              @default(0)
+  holidayDaysWorked  Float              @default(0)
+  holidayPay         Float              @default(0)
+  lateDeduction      Float              @default(0)
+
+  status             PayrollBatchStatus @default(DRAFT)
+  qrCodeHash         String?
+  pdfPath            String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  batch              PayrollBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  user               User               @relation("UserPayslips", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, userId])
+}
+
+

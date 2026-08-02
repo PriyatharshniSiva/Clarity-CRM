@@ -39,7 +39,10 @@ import {
   Pin,
   FolderOpen,
   Sparkles,
-  Zap
+  Zap,
+  Wrench,
+  FileCode,
+  ListTree
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -47,6 +50,10 @@ import { getUploadUrl } from '../../services/api';
 import UserAvatar from '../common/UserAvatar';
 
 const DashboardLayout = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentFull = location.pathname + location.search;
+
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markRead, markAllAsRead, deleteNotification } = useSocket();
   const { companyName, companyLogo, themeMode, updateThemeSettings } = useTheme();
@@ -67,10 +74,6 @@ const DashboardLayout = ({ children }) => {
     setIsPinned(nextPin);
     localStorage.setItem('sidebar_pinned', String(nextPin));
   };
-
-  const navigate = useNavigate();
-  const location = useLocation();
-  const currentFull = location.pathname + location.search;
 
   const profileRef = useRef(null);
 
@@ -157,6 +160,15 @@ const DashboardLayout = ({ children }) => {
       ]
     },
     {
+      title: 'Platform Builder Hub',
+      items: [
+        { label: 'Form Builder', path: '/super-admin/platform-builder/forms', icon: FileCode, roles: ['SUPER_ADMIN'] },
+        { label: 'Menu Builder', path: '/super-admin/platform-builder/menus', icon: ListTree, roles: ['SUPER_ADMIN'] },
+        { label: 'Metrics & Audit', path: '/super-admin/platform-builder/audit', icon: BarChart3, roles: ['SUPER_ADMIN'] },
+        { label: 'Future Extensions', path: '/super-admin/platform-builder/extensions', icon: Layers, roles: ['SUPER_ADMIN'] }
+      ]
+    },
+    {
       title: 'Overview',
       items: [
         { label: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
@@ -203,8 +215,23 @@ const DashboardLayout = ({ children }) => {
         { label: 'My Work Logs', path: '/worklogs', icon: Clock, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Attendance Portal', path: '/attendance', icon: Clock, roles: ['INTERN', 'TEAM_LEADER', 'EMPLOYEE'] },
         { label: 'Attendance Audit', path: '/attendance-audit', icon: Clock, roles: ['ADMIN', 'TEAM_LEADER'] },
+        { label: 'Leave Management', path: '/leave-management', icon: Calendar, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN', 'SUPER_ADMIN'] },
         { label: 'Ticket Desk', path: '/tickets', icon: Ticket, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Asset Management', path: '/assets', icon: Laptop, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
+      ]
+    },
+    {
+      title: 'Finance & Payroll',
+      items: [
+        { label: 'Payroll Dashboard', path: '/payroll/dashboard', icon: BarChart3, roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Salary Templates', path: '/payroll/templates', icon: FileText, roles: ['ADMIN'] },
+        { label: 'Salary Structures', path: '/payroll/structures', icon: Users, roles: ['ADMIN'] },
+        { label: 'Payroll Processing', path: '/payroll/processing', icon: Layers, roles: ['ADMIN'] },
+        { label: 'Payslips Desk', path: '/payroll/payslips', icon: FileCode, roles: ['ADMIN'] },
+        { label: 'Holiday Calendar', path: '/payroll/holidays', icon: Calendar, roles: ['ADMIN'] },
+        { label: 'Payroll Reports', path: '/payroll/reports', icon: BarChart3, roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Payroll Settings', path: '/payroll/settings', icon: Settings, roles: ['ADMIN'] },
+        { label: 'My Payslips & Salary', path: '/my-payroll', icon: FileText, roles: ['EMPLOYEE', 'INTERN', 'TEAM_LEADER'] }
       ]
     },
     {
@@ -275,6 +302,9 @@ const DashboardLayout = ({ children }) => {
     } else if (pathname === '/announcements') {
       parts.push({ label: 'Operations', path: '/announcements' });
       parts.push({ label: 'Announcements', path: '/announcements' });
+    } else if (pathname === '/leave-management' || pathname === '/leaves') {
+      parts.push({ label: 'Operations', path: '/leave-management' });
+      parts.push({ label: 'Leave Management', path: '/leave-management' });
     } else if (pathname === '/reports') {
       parts.push({ label: 'System Control', path: '/reports' });
       parts.push({ label: 'Report Center', path: '/reports' });
@@ -360,7 +390,7 @@ const DashboardLayout = ({ children }) => {
                     {filteredItems.map((item) => {
                       const Icon = item.icon;
                       const itemPathBase = item.path.split('?')[0];
-                      const isActive = currentFull === item.path || (itemPathBase === '/tasks' && location.pathname === '/tasks' && !location.search && item.label === 'Active Board');
+                      const isActive = location.pathname === item.path || currentFull === item.path || (itemPathBase === '/tasks' && location.pathname === '/tasks' && !location.search && item.label === 'Active Board') || (item.path.endsWith('/dashboard') && location.pathname === '/super-admin/platform-builder');
 
                       return (
                         <Link

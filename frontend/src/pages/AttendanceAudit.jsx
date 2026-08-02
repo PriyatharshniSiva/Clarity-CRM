@@ -11,6 +11,7 @@ import {
   Calendar,
   FileText,
   Eye,
+  Check,
   CheckCircle,
   XCircle,
   Phone
@@ -70,8 +71,12 @@ const AttendanceAudit = () => {
   const handleUpdateLeaveStatus = async (id, status) => {
     setSubmittingStatus(true);
     try {
-      await api.put(`/leaves/${id}/status`, { status });
-      const actionText = status === 'APPROVED' ? 'accepted & WFH assigned' : 'declined & marked ABSENT';
+      if (status === 'APPROVED') {
+        await api.put(`/leaves/${id}/admin-approve`, { remarks: 'Sanctioned via Attendance Audit' });
+      } else {
+        await api.put(`/leaves/${id}/reject`, { remarks: 'Declined via Attendance Audit' });
+      }
+      const actionText = status === 'APPROVED' ? 'sanctioned & attendance updated' : 'declined';
       setAlertMsg(`Leave application letter successfully ${actionText}.`);
       fetchAllLeaves();
       fetchLogsAndAnalytics();
@@ -131,6 +136,19 @@ const AttendanceAudit = () => {
       return startStr;
     }
     return `${startStr} to ${endStr}`;
+  };
+
+  const getLeaveDurationDisplay = (l) => {
+    if (l.totalDays !== undefined && l.totalDays !== null && Number(l.totalDays) > 0) {
+      const days = Number(l.totalDays);
+      return days === 1 ? '1 Day' : `${days} Days`;
+    }
+    if (!l.startDate) return '1 Day';
+    const start = new Date(l.startDate);
+    const end = l.endDate ? new Date(l.endDate) : start;
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays === 1 ? '1 Day' : `${diffDays} Days`;
   };
 
   useEffect(() => {
@@ -198,7 +216,7 @@ const AttendanceAudit = () => {
             </p>
           </div>
           <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
-            {leaves.filter(l => l.status === 'PENDING').length} Pending Review
+            {leaves.filter(l => ['PENDING_ADMIN_APPROVAL', 'PENDING_TL_APPROVAL', 'PENDING'].includes(l.status)).length} Pending Review
           </span>
         </div>
 
@@ -206,18 +224,17 @@ const AttendanceAudit = () => {
           <table className="w-full min-w-[1000px] text-sm border-collapse">
             <thead>
               <tr className="text-xs font-semibold text-muted-foreground uppercase border-b border-border/30 bg-muted/20 text-left whitespace-nowrap">
-                <th className="px-6 py-4 whitespace-nowrap">Applicant Employee</th>
-                <th className="px-6 py-4 whitespace-nowrap">Letter Subject & Type</th>
-                <th className="px-6 py-4 whitespace-nowrap">Date Duration</th>
-                <th className="px-6 py-4 whitespace-nowrap">Sanction Status</th>
-                <th className="px-6 py-4 text-center whitespace-nowrap">Letter Body</th>
+                <th className="px-6 py-4 whitespace-nowrap">Applicant</th>
+                <th className="px-6 py-4 whitespace-nowrap">Leave Type</th>
+                <th className="px-6 py-4 whitespace-nowrap">Duration</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap">Read Letter</th>
                 <th className="px-6 py-4 text-right whitespace-nowrap">Admin Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/25">
               {leaves.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground whitespace-nowrap">
+                  <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground whitespace-nowrap">
                     No leave or WFH application letters submitted.
                   </td>
                 </tr>
@@ -231,65 +248,63 @@ const AttendanceAudit = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-bold text-foreground max-w-xs truncate block" title={l.subject || l.reason}>{l.subject || l.reason}</span>
-                        <span className={`inline-flex w-max rounded px-2 py-0.5 text-[10px] font-bold font-mono ${l.type === 'WFH' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-rose-500/10 text-rose-600'}`}>
-                          {l.type}
-                        </span>
-                      </div>
+                      <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-extrabold font-mono uppercase shadow-2xs ${
+                        (l.leaveType || l.type) === 'WFH'
+                          ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'
+                          : (l.leaveType || l.type) === 'SICK'
+                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          : (l.leaveType || l.type) === 'EMERGENCY'
+                          ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                          : 'bg-primary/10 text-primary border border-primary/20'
+                      }`}>
+                        {l.leaveType || l.type || 'CASUAL'}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">
-                      {formatLeavePeriod(l.startDate, l.endDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {l.status === 'APPROVED' ? (
-                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-600">
-                          ACCEPTED (WFH Assigned)
-                        </span>
-                      ) : l.status === 'REJECTED' ? (
-                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-red-500/10 text-red-500">
-                          DECLINED (Marked Absent)
-                        </span>
-                      ) : (
-                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase bg-yellow-500/10 text-yellow-600">
-                          PENDING SANCTION
-                        </span>
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-foreground text-sm">
+                      {getLeaveDurationDisplay(l)}
                     </td>
                     <td className="px-6 py-4 text-center whitespace-nowrap">
                       <button
                         onClick={() => setViewingLetter(l)}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 transition-all"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:bg-primary/10 px-3.5 py-1.5 rounded-xl border border-primary/20 transition-all active:scale-95 cursor-pointer"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span>Read Letter</span>
                       </button>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
-                      {l.status === 'PENDING' ? (
-                        <div className="flex gap-2 justify-end">
+                      {['PENDING_ADMIN_APPROVAL', 'PENDING_TL_APPROVAL', 'PENDING'].includes(l.status) ? (
+                        <div className="flex items-center gap-2 justify-end">
                           <button
                             onClick={() => handleUpdateLeaveStatus(l.id, 'APPROVED')}
                             disabled={submittingStatus}
-                            className="bg-primary hover:bg-primary-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1"
-                            title="Accept Letter & Assign WFH"
+                            className="h-8 w-8 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md hover:scale-110 transition-all cursor-pointer disabled:opacity-50"
+                            title="Accept & Sanction Leave Application"
                           >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            <span>Accept (Assign WFH)</span>
+                            <Check className="h-4 w-4 stroke-[3]" />
                           </button>
                           <button
                             onClick={() => handleUpdateLeaveStatus(l.id, 'REJECTED')}
                             disabled={submittingStatus}
-                            className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1"
-                            title="Decline Letter & Mark Absent"
+                            className="h-8 w-8 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-md hover:scale-110 transition-all cursor-pointer disabled:opacity-50"
+                            title="Decline Leave Application"
                           >
-                            <XCircle className="h-3.5 w-3.5" />
-                            <span>Decline (Mark Absent)</span>
+                            <X className="h-4 w-4 stroke-[3]" />
                           </button>
                         </div>
                       ) : (
                         <div className="text-right">
-                          <span className="text-[10px] text-muted-foreground font-semibold">Sanctioned</span>
+                          {l.status === 'APPROVED' ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                              <span>Sanctioned</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                              <X className="h-3.5 w-3.5 stroke-[3]" />
+                              <span>Declined</span>
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
@@ -483,39 +498,37 @@ const AttendanceAudit = () => {
             </div>
 
             <div className="mt-4 space-y-4 font-sans text-xs">
-              <div className="flex justify-between items-center bg-muted/40 p-3 rounded-xl border border-border/30">
+              <div className="flex justify-between items-center bg-muted/40 p-3.5 rounded-xl border border-border/30">
                 <div>
-                  <span className="text-[10px] text-muted-foreground font-semibold">Applicant Employee</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase block mb-0.5">Applicant Employee</span>
                   <p className="font-bold text-sm text-foreground">{viewingLetter.user?.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{viewingLetter.user?.employeeId} ({viewingLetter.user?.role?.replace('_', ' ')})</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">{viewingLetter.user?.employeeId} ({viewingLetter.user?.role?.replace('_', ' ')})</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground font-semibold">Type & Sanction Status</span>
-                  <p className="font-mono font-bold text-indigo-500">{viewingLetter.type}</p>
-                  <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${viewingLetter.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' : viewingLetter.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-600'}`}>
-                    {viewingLetter.status === 'APPROVED' ? 'ACCEPTED (WFH Assigned)' : viewingLetter.status === 'REJECTED' ? 'DECLINED (Marked Absent)' : 'PENDING REVIEW'}
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase block mb-0.5">Leave Type</span>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-extrabold font-mono uppercase ${
+                    (viewingLetter.leaveType || viewingLetter.type) === 'WFH' ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                  }`}>
+                    {viewingLetter.leaveType || viewingLetter.type || 'CASUAL'}
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">Letter Subject</span>
-                <p className="font-bold text-foreground text-sm bg-muted/20 p-2.5 rounded-xl border border-border/30">
-                  {viewingLetter.subject || viewingLetter.reason}
-                </p>
+              <div className="grid grid-cols-2 gap-3 bg-muted/20 p-3 rounded-xl border border-border/30">
+                <div>
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5">Duration</span>
+                  <p className="font-black text-foreground text-sm">{getLeaveDurationDisplay(viewingLetter)}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5">Start & End Dates</span>
+                  <p className="font-medium text-foreground text-xs">{formatLeavePeriod(viewingLetter.startDate, viewingLetter.endDate)}</p>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">Leave Period</span>
-                <p className="font-medium text-foreground">
-                  {formatLeavePeriod(viewingLetter.startDate, viewingLetter.endDate)}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">Letter Document Body</span>
-                <div className="bg-muted/10 p-4 rounded-xl border border-border/40 font-mono text-[11px] whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
-                  {viewingLetter.letterContent || viewingLetter.reason}
+                <span className="text-[10px] text-muted-foreground font-bold uppercase">Reason / Application Letter</span>
+                <div className="bg-muted/10 p-4 rounded-xl border border-border/40 text-xs whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto font-medium text-foreground">
+                  {viewingLetter.reason || viewingLetter.letterContent}
                 </div>
               </div>
 
@@ -535,7 +548,7 @@ const AttendanceAudit = () => {
                 Close
               </button>
 
-              {viewingLetter.status === 'PENDING' && (
+              {['PENDING_ADMIN_APPROVAL', 'PENDING_TL_APPROVAL', 'PENDING'].includes(viewingLetter.status) ? (
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -543,10 +556,10 @@ const AttendanceAudit = () => {
                       setViewingLetter(null);
                       handleUpdateLeaveStatus(id, 'APPROVED');
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-md flex items-center gap-1.5"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
                   >
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Accept & Assign WFH</span>
+                    <Check className="h-4 w-4 stroke-[3]" />
+                    <span>Accept (Sanction)</span>
                   </button>
 
                   <button
@@ -555,11 +568,25 @@ const AttendanceAudit = () => {
                       setViewingLetter(null);
                       handleUpdateLeaveStatus(id, 'REJECTED');
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-md flex items-center gap-1.5"
+                    className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
                   >
-                    <XCircle className="h-4 w-4" />
-                    <span>Decline & Mark Absent</span>
+                    <X className="h-4 w-4 stroke-[3]" />
+                    <span>Decline (Reject)</span>
                   </button>
+                </div>
+              ) : (
+                <div>
+                  {viewingLetter.status === 'APPROVED' ? (
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                      <span>Sanctioned</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                      <X className="h-3.5 w-3.5 stroke-[3]" />
+                      <span>Declined</span>
+                    </span>
+                  )}
                 </div>
               )}
             </div>
