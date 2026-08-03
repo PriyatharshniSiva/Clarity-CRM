@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getUploadUrl } from '../services/api';
+import UserAvatar from '../components/common/UserAvatar';
 import {
   Megaphone,
   Plus,
@@ -183,10 +183,9 @@ const Announcements = () => {
 
               <div className="mt-5 flex items-center justify-between border-t border-border/30 pt-3 text-[10px] text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <img 
-                    src={announce.creator?.profilePic ? getUploadUrl(announce.creator.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${announce.creator?.name}`}
-                    className="h-5 w-5 rounded-full object-cover"
-                    alt="profile"
+                  <UserAvatar 
+                    user={announce.creator}
+                    className="h-5 w-5 rounded-full"
                   />
                   <span className="font-semibold">{announce.creator?.name} ({announce.creator?.role?.replace('_', ' ')})</span>
                 </div>

@@ -210,7 +210,7 @@ const Projects = () => {
       description: '',
       type: 'CLIENT',
       priority: 'MEDIUM',
-      status: 'DRAFT',
+      status: 'ACTIVE',
       estimatedStartDate: today,
       estimatedEndDate: nextMonth,
       teamId: '',

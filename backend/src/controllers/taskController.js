@@ -3,6 +3,7 @@ const { createNotification } = require('../services/notification');
 const { logActivity } = require('../utils/activityLogger');
 const { sendTaskAssignmentEmail, sendTaskStatusUpdateEmail, sendTeamTaskAssignmentEmail } = require('../services/email');
 const { syncProjectLifecycleChatRoom } = require('../services/projectChatService');
+const { getIo } = require('../socket');
 
 const createTask = async (req, res) => {
   try {
@@ -208,6 +209,13 @@ const createTask = async (req, res) => {
 
     if (projectId) {
       await syncProjectLifecycleChatRoom(projectId);
+    }
+
+    try {
+      const io = getIo();
+      if (io) io.emit('task_created', task);
+    } catch (e) {
+      console.error('Socket emit task_created error:', e);
     }
 
     res.status(201).json(task);
@@ -453,6 +461,13 @@ const updateTaskStatus = async (req, res) => {
 
     if (updatedTask.projectId) {
       await syncProjectLifecycleChatRoom(updatedTask.projectId);
+    }
+
+    try {
+      const io = getIo();
+      if (io) io.emit('task_updated', updatedTask);
+    } catch (e) {
+      console.error('Socket emit task_updated error:', e);
     }
 
     res.json(updatedTask);

@@ -251,7 +251,7 @@
 button.bg-primary,
 a.bg-primary,
 button[type="submit"].bg-primary {
-  background: linear-gradient(135deg, rgb(var(--button-gradient-start, 29, 78, 216)), rgb(var(--button-gradient-end, 59, 130, 246))) !important;
+  background: linear-gradient(135deg, rgb(var(--button-gradient-start, var(--primary))), rgb(var(--button-gradient-end, var(--primary)))) !important;
   color: #ffffff !important;
   box-shadow: 0 4px 14px 0 rgba(var(--primary), 0.25);
   transition: all 0.2s ease-in-out;
@@ -263,7 +263,7 @@ button.bg-primary:hover,
 a.bg-primary:hover,
 button[type="submit"].bg-primary:hover,
 .hover\:bg-primary-hover:hover {
-  background: linear-gradient(135deg, rgb(var(--button-gradient-hover-start, 30, 64, 175)), rgb(var(--button-gradient-hover-end, 37, 99, 235))) !important;
+  background: linear-gradient(135deg, rgb(var(--button-gradient-hover-start, var(--primary-hover))), rgb(var(--button-gradient-hover-end, var(--primary-hover)))) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px 0 rgba(var(--primary), 0.35);
   transform: translateY(-1px);

@@ -562,8 +562,7 @@ const DashboardLayout = ({ children }) => {
                   className="flex items-center gap-2 rounded-xl p-1 hover:bg-muted transition-all select-none"
                 >
                   <UserAvatar
-                    src={user?.profilePicture}
-                    name={user?.name}
+                    user={user}
                     className="h-8 w-8 rounded-xl object-cover ring-2 ring-primary/20"
                   />
                   <div className="hidden text-left md:block pr-1">

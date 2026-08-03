@@ -1,12 +1,7 @@
 import React from 'react';
 import { PriorityBadge } from './PriorityBadge';
 import { Clock, CheckSquare, Paperclip, MessageSquare, GripVertical } from 'lucide-react';
-
-const getUploadUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
-};
+import UserAvatar from '../common/UserAvatar';
 
 export const TaskCard = ({ task, onClick, onDragStart }) => {
   const isOverdue = new Date(task.deadline) < new Date() && !['APPROVED', 'COMPLETED'].includes(task.status);
@@ -81,11 +76,9 @@ export const TaskCard = ({ task, onClick, onDragStart }) => {
 
         {/* Assignee Avatar */}
         {task.assignee && (
-          <img
-            src={task.assignee.profilePic ? getUploadUrl(task.assignee.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(task.assignee.name)}`}
-            alt={task.assignee.name}
-            title={`Assigned to ${task.assignee.name}`}
-            className="h-5 w-5 rounded-full border object-cover"
+          <UserAvatar
+            user={task.assignee}
+            className="h-5 w-5 rounded-full border"
           />
         )}
       </div>

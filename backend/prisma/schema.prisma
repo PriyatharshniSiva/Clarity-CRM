@@ -504,6 +504,10 @@ model LeaveRequest {
   reason              String
   contactPhone        String?
   
+  // Team Snapshot at submission time
+  submittedTeamId       String?
+  submittedTeamLeaderId String?
+
   // Status Workflow
   status              String   @default("PENDING_TL_APPROVAL") // PENDING_TL_APPROVAL, PENDING_ADMIN_APPROVAL, APPROVED, REJECTED, CANCELLED
 

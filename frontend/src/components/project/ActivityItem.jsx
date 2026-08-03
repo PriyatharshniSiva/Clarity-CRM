@@ -1,11 +1,6 @@
 import React from 'react';
 import { History, Sparkles, CheckCircle2, User, FileText, Calendar } from 'lucide-react';
-
-const getUploadUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
-};
+import UserAvatar from '../common/UserAvatar';
 
 export const ActivityItem = ({ item }) => {
   const getActionIcon = () => {
@@ -25,14 +20,12 @@ export const ActivityItem = ({ item }) => {
 
   const user = item.changedBy || item.user;
   const name = user?.name || 'System User';
-  const pic = user?.profilePic ? getUploadUrl(user.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
 
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/30 hover:border-primary/30 transition-all text-left">
-      <img
-        src={pic}
-        alt={name}
-        className="h-7 w-7 rounded-full object-cover border shrink-0 mt-0.5"
+      <UserAvatar
+        user={user}
+        className="h-7 w-7 rounded-full border shrink-0 mt-0.5"
       />
       <div className="flex-1 space-y-1">
         <div className="flex items-center justify-between gap-2">
@@ -40,14 +33,16 @@ export const ActivityItem = ({ item }) => {
             {getActionIcon()}
             <span className="text-xs font-bold text-foreground">{name}</span>
           </div>
-          <span className="text-[10px] text-muted-foreground font-mono">
+          <span className="text-[10px] font-mono text-muted-foreground">
             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          {item.detail}
+          {item.notes || item.details || 'Performed activity update'}
         </p>
       </div>
     </div>
   );
 };
+
+export default ActivityItem;

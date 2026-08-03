@@ -1,16 +1,10 @@
 import React from 'react';
 import { User, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-
-const getUploadUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
-};
+import UserAvatar from '../common/UserAvatar';
 
 export const ResourceCard = ({ resource }) => {
   if (!resource) return null;
   const name = resource.name || 'User';
-  const pic = resource.profilePic ? getUploadUrl(resource.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
 
   const getStatusBadge = () => {
     switch (resource.status) {
@@ -29,7 +23,7 @@ export const ResourceCard = ({ resource }) => {
     <div className="glass-card p-4 rounded-xl border border-white/70 dark:border-white/10 shadow-xs space-y-3 text-left">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={pic} alt={name} className="h-9 w-9 rounded-full object-cover border shrink-0" />
+          <UserAvatar user={resource} className="h-9 w-9 rounded-full border shrink-0" />
           <div>
             <h4 className="text-xs font-bold text-foreground">{name}</h4>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{resource.role}</span>
@@ -38,32 +32,22 @@ export const ResourceCard = ({ resource }) => {
         {getStatusBadge()}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="p-2 rounded-lg bg-muted/20 border border-border/20">
-          <span className="text-[9px] font-bold text-muted-foreground uppercase block">Capacity</span>
-          <span className="font-bold text-foreground font-mono">{resource.capacityHours}h</span>
+      <div className="space-y-1 pt-1">
+        <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+          <span>Assigned Hours</span>
+          <span className="font-bold text-foreground">{resource.assignedHours || 0} / 40 hrs</span>
         </div>
-        <div className="p-2 rounded-lg bg-muted/20 border border-border/20">
-          <span className="text-[9px] font-bold text-muted-foreground uppercase block">Assigned</span>
-          <span className="font-bold text-primary font-mono">{resource.assignedHours}h</span>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/20 border border-border/20">
-          <span className="text-[9px] font-bold text-muted-foreground uppercase block">Logged</span>
-          <span className="font-bold text-emerald-500 font-mono">{resource.loggedHours}h</span>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-1">
-        <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden border border-border/30">
+        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden border">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
+            className={`h-full transition-all ${
               resource.status === 'OVERALLOCATED' ? 'bg-rose-500' : resource.status === 'UNDERUTILIZED' ? 'bg-amber-500' : 'bg-emerald-500'
             }`}
-            style={{ width: `${Math.min(100, resource.workloadPercent)}%` }}
+            style={{ width: `${Math.min(100, resource.workloadPercent || 0)}%` }}
           />
         </div>
       </div>
     </div>
   );
 };
+
+export default ResourceCard;

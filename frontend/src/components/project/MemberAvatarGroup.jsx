@@ -1,10 +1,5 @@
 import React from 'react';
-
-const getUploadUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
-};
+import UserAvatar from '../common/UserAvatar';
 
 export const MemberAvatarGroup = ({ members = [], limit = 4 }) => {
   if (!members || members.length === 0) {
@@ -18,16 +13,12 @@ export const MemberAvatarGroup = ({ members = [], limit = 4 }) => {
     <div className="flex items-center -space-x-2 overflow-hidden py-1">
       {visibleMembers.map((m, index) => {
         const u = m.user || m;
-        const name = u.name || 'Member';
-        const pic = u.profilePic ? getUploadUrl(u.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
 
         return (
-          <img
+          <UserAvatar
             key={m.id || u.id || index}
-            src={pic}
-            alt={name}
-            title={`${name} (${m.role || u.role || 'Member'})`}
-            className="inline-block h-7 w-7 rounded-full ring-2 ring-background object-cover bg-card shadow-xs transition-transform hover:scale-110 hover:z-10"
+            user={u}
+            className="inline-block h-7 w-7 rounded-full ring-2 ring-background shadow-xs transition-transform hover:scale-110 hover:z-10"
           />
         );
       })}
@@ -43,3 +34,5 @@ export const MemberAvatarGroup = ({ members = [], limit = 4 }) => {
     </div>
   );
 };
+
+export default MemberAvatarGroup;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
-import api, { getUploadUrl, downloadFile } from '../services/api';
+import api, { getUploadUrl, downloadFile, getSocket } from '../services/api';
 import confetti from 'canvas-confetti';
 import {
   Download,
@@ -33,6 +33,7 @@ import {
   Bug,
   Trash2
 } from 'lucide-react';
+import UserAvatar from '../components/common/UserAvatar';
 
 const Tasks = () => {
   const { user } = useAuth();
@@ -99,6 +100,7 @@ const Tasks = () => {
   const [selectedSprint, setSelectedSprint] = useState('ALL');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
   const [selectedType, setSelectedType] = useState('ALL');
+  const [selectedProject, setSelectedProject] = useState('ALL');
 
   // Drag highlight state
   const [activeDragCol, setActiveDragCol] = useState(null);
@@ -269,6 +271,34 @@ const Tasks = () => {
       fetchTeamMembers();
       fetchTeams();
     }
+
+    try {
+      const socket = getSocket();
+      if (socket) {
+        const handleProjectChange = () => fetchProjects();
+        const handleTaskChange = () => fetchTasks();
+
+        socket.on('project_created', handleProjectChange);
+        socket.on('project_updated', handleProjectChange);
+        socket.on('project_deleted', handleProjectChange);
+
+        socket.on('task_created', handleTaskChange);
+        socket.on('task_updated', handleTaskChange);
+        socket.on('task_deleted', handleTaskChange);
+
+        return () => {
+          socket.off('project_created', handleProjectChange);
+          socket.off('project_updated', handleProjectChange);
+          socket.off('project_deleted', handleProjectChange);
+
+          socket.off('task_created', handleTaskChange);
+          socket.off('task_updated', handleTaskChange);
+          socket.off('task_deleted', handleTaskChange);
+        };
+      }
+    } catch (e) {
+      console.error('Socket setup error in Tasks:', e);
+    }
   }, [user]);
 
   // Synchronize active tab from URL query params
@@ -322,6 +352,24 @@ const Tasks = () => {
     }
   };
 
+  const openCreateTaskForProject = (proj) => {
+    const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+    setCreateFormData({
+      title: '',
+      description: '',
+      priority: 'MEDIUM',
+      deadline: nextWeek,
+      assigneeId: '',
+      teamId: proj?.teamId || '',
+      type: 'TASK',
+      storyPoints: 0,
+      sprintName: '',
+      projectId: proj?.id || ''
+    });
+    setTaskFiles([]);
+    setCreateModalOpen(true);
+  };
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -337,6 +385,10 @@ const Tasks = () => {
         formData.append('teamId', createFormData.teamId);
       } else {
         formData.append('assigneeId', createFormData.assigneeId);
+      }
+
+      if (createFormData.projectId) {
+        formData.append('projectId', createFormData.projectId);
       }
       
       formData.append('type', createFormData.type);
@@ -1207,12 +1259,10 @@ const Tasks = () => {
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1.5">
               {teamMembers.slice(0, 4).map((member, i) => (
-                <img
+                <UserAvatar
                   key={i}
-                  src={member.profilePic ? getUploadUrl(member.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${member.name}`}
-                  className="h-6 w-6 rounded-full border border-card object-cover"
-                  title={member.name}
-                  alt="avatar"
+                  user={member}
+                  className="h-6 w-6 rounded-full border border-card"
                 />
               ))}
               {teamMembers.length > 4 && (
@@ -1253,6 +1303,21 @@ const Tasks = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+          </div>
+
+          {/* Project Filter */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase">Project:</span>
+            <select
+              className="text-[11px] py-1 px-2 rounded border bg-card max-w-[180px] truncate"
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+            >
+              <option value="ALL">All Projects ({projectsList.length})</option>
+              {projectsList.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} ({p.projectCode})</option>
+              ))}
+            </select>
           </div>
 
           {/* Sprint Filter */}
@@ -1304,94 +1369,219 @@ const Tasks = () => {
 
       {/* Switch Render according to Sub Tab selected */}
       {activeSubTab === 'Board' ? (
-        <div className="w-full max-w-full min-w-0 flex-1 flex overflow-x-auto gap-4 h-full pb-4 min-h-[500px] scrollbar-thin">
-            {columns.map((col, idx) => {
-              const isHovered = activeDragCol === col.title;
+        <div className="space-y-8 w-full max-w-full min-w-0 flex-1">
+          {(() => {
+            const activeProjects = (projectsList || []).filter(p => {
+              if (p.isDeleted) return false;
+              if (selectedProject !== 'ALL' && p.id !== selectedProject) return false;
+              return true;
+            });
+
+            if (activeProjects.length === 0) {
               return (
-                <div
-                  key={col.title}
-                  onDragOver={onDragOver}
-                  onDragEnter={() => setActiveDragCol(col.title)}
-                  onDragLeave={() => setActiveDragCol(null)}
-                  onDrop={(e) => onDrop(e, col.title)}
-                  className={`flex flex-col shrink-0 min-w-[280px] max-w-[320px] bg-card/65 border ${
-                    isHovered ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' : 'border-border/30'
-                  } rounded-xl p-3 h-full overflow-hidden transition-all duration-200`}
-                >
-                  {/* Column Header */}
-                  <div className="flex items-center gap-2 pb-2 mb-3 border-b border-border/20">
-                    <span className="text-xs font-bold text-muted-foreground tracking-wider uppercase">{col.title}</span>
-                    <span className="text-[10px] bg-muted font-bold text-muted-foreground px-2 py-0.5 rounded-full">
-                      {getColTasks(col.statuses).length}
-                    </span>
-                  </div>
-
-                  {/* Cards Scrolling Box */}
-                  <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-                    {getColTasks(col.statuses).length === 0 ? (
-                      <div className="border border-dashed rounded-xl p-6 text-center text-[10px] text-muted-foreground">
-                        No tickets
-                      </div>
-                    ) : (
-                      getColTasks(col.statuses).map((task) => (
-                        <div
-                          key={task.id}
-                          draggable
-                          onDragStart={(e) => onDragStart(e, task.id)}
-                          onClick={() => openDetailModal(task)}
-                          className="group bg-card border border-border/40 rounded-xl p-3 shadow hover:border-primary/45 cursor-grab active:cursor-grabbing transition-all text-left space-y-2.5 animate-in fade-in duration-200"
-                        >
-                          <h4 className="text-xs font-bold text-foreground group-hover:text-primary leading-tight line-clamp-2">
-                            {task.title}
-                          </h4>
-
-                          {/* Middle: Deadline & Type info */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            {/* Calendar capsule */}
-                            <div className="flex items-center gap-1 rounded bg-muted/65 border border-border/30 px-1.5 py-0.5 text-[9px] text-muted-foreground font-semibold">
-                              <Calendar className="h-2.5 w-2.5" />
-                              <span>{new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                            </div>
-
-                            {task.sprintName && (
-                              <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-muted-foreground px-1.5 py-0.5 rounded font-mono font-bold">
-                                {task.sprintName}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Bottom Bar: Key & Type icon left, Avatar right */}
-                          <div className="flex items-center justify-between pt-1 border-t border-border/20">
-                            <div className="flex items-center gap-1.5">
-                              {getTypeIcon(task.type)}
-                              <span className="text-[9px] text-muted-foreground font-mono font-bold">
-                                MRF-{task.id.slice(0, 4).toUpperCase()}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5">
-                              {task.storyPoints > 0 && (
-                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted border text-[8px] font-bold text-muted-foreground" title="Story Points">
-                                  {task.storyPoints}
-                                </span>
-                              )}
-                              <img
-                                src={task.assignee?.profilePic ? getUploadUrl(task.assignee.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${task.assignee?.name}`}
-                                className="h-5 w-5 rounded-full border object-cover"
-                                title={task.assignee?.name}
-                                alt="avatar"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
+                <div className="bg-card border border-dashed border-border/60 rounded-3xl p-12 text-center space-y-3 shadow-xs">
+                  <FolderOpen className="h-10 w-10 text-muted-foreground mx-auto" />
+                  <h3 className="text-sm font-bold text-foreground">No Projects Found</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    There are no active projects matching your selected filter parameters. Create a new project to start managing tasks.
+                  </p>
                 </div>
               );
-            })}
-          </div>
+            }
+
+            return activeProjects.map(proj => {
+              // Extract all tasks for this project
+              const projTasks = filteredTasks.filter(t => t.projectId === proj.id);
+
+              // Apply Role-Based Visibility
+              let roleTasks = projTasks;
+              if (user.role === 'INTERN' || user.role === 'EMPLOYEE') {
+                roleTasks = projTasks.filter(t => t.assigneeId === user.id);
+              }
+
+              // Compute dynamic project progress %
+              const totalTasksCount = roleTasks.length;
+              const completedTasksCount = roleTasks.filter(t => t.status === 'APPROVED' || t.status === 'COMPLETED').length;
+              const progressPct = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+              return (
+                <div key={proj.id} className="rounded-3xl border border-border/70 bg-card/60 p-5 shadow-sm space-y-4 text-left transition-all">
+                  {/* Project Workspace Header Banner */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-4">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-black uppercase font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                          {proj.projectCode}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          proj.priority === 'URGENT' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                          proj.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                          'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                        }`}>
+                          {proj.priority || 'MEDIUM'} Priority
+                        </span>
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">
+                          {proj.status}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-extrabold text-foreground flex items-center gap-2 pt-0.5">
+                        {proj.name}
+                      </h3>
+                      {proj.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{proj.description}</p>
+                      )}
+                    </div>
+
+                    {/* Right side: Leader, Team & Progress Bar */}
+                    <div className="flex flex-wrap items-center gap-5 shrink-0">
+                      {/* Project Leader & Team info */}
+                      <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-3 py-1.5 rounded-2xl">
+                        <div className="text-left text-[11px]">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase block leading-none">Leader & Team</span>
+                          <span className="font-extrabold text-foreground block">{proj.leader?.name || 'Unassigned Leader'}</span>
+                          <span className="text-[10px] text-muted-foreground font-semibold block">{proj.team?.name || 'General Workspace'}</span>
+                        </div>
+                      </div>
+
+                      {/* Dynamic Progress Ring / Bar */}
+                      <div className="w-44 bg-muted/30 border border-border/40 p-2.5 rounded-2xl space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold">
+                          <span className="text-muted-foreground uppercase">Completion</span>
+                          <span className="text-primary font-black">{progressPct}% ({completedTasksCount}/{totalTasksCount})</span>
+                        </div>
+                        <div className="w-full bg-muted h-2 rounded-full overflow-hidden border border-border/20">
+                          <div className="bg-gradient-primary h-full rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+                        </div>
+                      </div>
+
+                      {['ADMIN', 'TEAM_LEADER'].includes(user.role) && (
+                        <button
+                          onClick={() => openCreateTaskForProject(proj)}
+                          className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add Task</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Kanban Columns OR Empty State */}
+                  {roleTasks.length === 0 ? (
+                    <div className="border border-dashed border-border/60 bg-muted/15 rounded-2xl p-8 text-center space-y-3">
+                      <FolderOpen className="h-8 w-8 text-muted-foreground/60 mx-auto" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-extrabold text-foreground">This project is active but no tasks have been created yet.</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {user.role === 'INTERN' || user.role === 'EMPLOYEE'
+                            ? 'No tasks are assigned to you in this project space.'
+                            : 'Create the first task to start assigning tickets to team members.'}
+                        </p>
+                      </div>
+                      {['ADMIN', 'TEAM_LEADER'].includes(user.role) && (
+                        <button
+                          onClick={() => openCreateTaskForProject(proj)}
+                          className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-all"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Create First Task</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-full min-w-0 flex overflow-x-auto gap-4 pb-2 scrollbar-thin">
+                      {columns.map((col) => {
+                        const colTasks = roleTasks.filter(t => col.statuses.includes(t.status));
+                        const isHovered = activeDragCol === `${proj.id}-${col.title}`;
+
+                        return (
+                          <div
+                            key={col.title}
+                            onDragOver={onDragOver}
+                            onDragEnter={() => setActiveDragCol(`${proj.id}-${col.title}`)}
+                            onDragLeave={() => setActiveDragCol(null)}
+                            onDrop={(e) => onDrop(e, col.title)}
+                            className={`flex flex-col shrink-0 min-w-[270px] max-w-[310px] bg-card/65 border ${
+                              isHovered ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' : 'border-border/30'
+                            } rounded-xl p-3 h-full overflow-hidden transition-all duration-200`}
+                          >
+                            {/* Column Header */}
+                            <div className="flex items-center gap-2 pb-2 mb-3 border-b border-border/20">
+                              <span className="text-xs font-bold text-muted-foreground tracking-wider uppercase">{col.title}</span>
+                              <span className="text-[10px] bg-muted font-bold text-muted-foreground px-2 py-0.5 rounded-full">
+                                {colTasks.length}
+                              </span>
+                            </div>
+
+                            {/* Task Tickets list */}
+                            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                              {colTasks.length === 0 ? (
+                                <div className="border border-dashed rounded-xl p-5 text-center text-[10px] text-muted-foreground">
+                                  No tickets
+                                </div>
+                              ) : (
+                                colTasks.map((task) => (
+                                  <div
+                                    key={task.id}
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, task.id)}
+                                    onClick={() => openDetailModal(task)}
+                                    className="group bg-card border border-border/40 rounded-xl p-3 shadow hover:border-primary/45 cursor-grab active:cursor-grabbing transition-all text-left space-y-2.5 animate-in fade-in duration-200"
+                                  >
+                                    <h4 className="text-xs font-bold text-foreground group-hover:text-primary leading-tight line-clamp-2">
+                                      {task.title}
+                                    </h4>
+
+                                    {/* Middle: Deadline & Type info */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <div className="flex items-center gap-1 rounded bg-muted/65 border border-border/30 px-1.5 py-0.5 text-[9px] text-muted-foreground font-semibold">
+                                        <Calendar className="h-2.5 w-2.5" />
+                                        <span>{new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                      </div>
+
+                                      {task.sprintName && (
+                                        <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-muted-foreground px-1.5 py-0.5 rounded font-mono font-bold">
+                                          {task.sprintName}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Bottom Bar: Key & Type icon left, Avatar right */}
+                                    <div className="flex items-center justify-between pt-1 border-t border-border/20">
+                                      <div className="flex items-center gap-1.5">
+                                        {getTypeIcon(task.type)}
+                                        <span className="text-[9px] text-muted-foreground font-mono font-bold">
+                                          MRF-{task.id.slice(0, 4).toUpperCase()}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1.5">
+                                        {task.storyPoints > 0 && (
+                                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted border text-[8px] font-bold text-muted-foreground" title="Story Points">
+                                            {task.storyPoints}
+                                          </span>
+                                        )}
+                                        <UserAvatar
+                                          user={task.assignee}
+                                          className="h-5 w-5 rounded-full border object-cover"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
+        </div>
       ) : activeSubTab === 'Summary' ? (
         renderSummaryTab()
       ) : activeSubTab === 'Backlog' ? (
@@ -1407,6 +1597,203 @@ const Tasks = () => {
       ) : activeSubTab === 'Forms' ? (
         renderFormsTab()
       ) : null}
+
+      {/* Create Task Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-3xl border border-border/40 bg-card p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 text-left space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-foreground">Create New Task Ticket</h3>
+                <p className="text-xs text-muted-foreground">Assign work to a team member or entire team.</p>
+              </div>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="rounded-full p-1.5 hover:bg-muted text-muted-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              {/* Task Title */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-foreground">Task Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Implement OAuth login integration"
+                  className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={createFormData.title}
+                  onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-foreground">Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="Detailed task description and requirements..."
+                  className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                />
+              </div>
+
+              {/* Row 1: Project & Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Project *</label>
+                  <select
+                    required
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                    value={createFormData.projectId}
+                    onChange={(e) => setCreateFormData({ ...createFormData, projectId: e.target.value })}
+                  >
+                    <option value="">Select Project...</option>
+                    {projectsList.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.projectCode})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Issue Type</label>
+                  <select
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                    value={createFormData.type}
+                    onChange={(e) => setCreateFormData({ ...createFormData, type: e.target.value })}
+                  >
+                    <option value="TASK">Task</option>
+                    <option value="BUG">Bug</option>
+                    <option value="STORY">Story</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Priority & Deadline */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Priority</label>
+                  <select
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                    value={createFormData.priority}
+                    onChange={(e) => setCreateFormData({ ...createFormData, priority: e.target.value })}
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Due Date *</label>
+                  <input
+                    type="date"
+                    required
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={createFormData.deadline}
+                    onChange={(e) => setCreateFormData({ ...createFormData, deadline: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Assign Type & Assignee */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Assign Target</label>
+                  <select
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                    value={assignType}
+                    onChange={(e) => setAssignType(e.target.value)}
+                  >
+                    <option value="INDIVIDUAL">Individual Member</option>
+                    <option value="TEAM">Entire Team</option>
+                  </select>
+                </div>
+
+                {assignType === 'INDIVIDUAL' ? (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">Assignee *</label>
+                    <select
+                      required
+                      className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                      value={createFormData.assigneeId}
+                      onChange={(e) => setCreateFormData({ ...createFormData, assigneeId: e.target.value })}
+                    >
+                      <option value="">Select Assignee...</option>
+                      {teamMembers.map(m => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.role})</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">Assignee Team *</label>
+                    <select
+                      required
+                      className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl font-medium"
+                      value={createFormData.teamId}
+                      onChange={(e) => setCreateFormData({ ...createFormData, teamId: e.target.value })}
+                    >
+                      <option value="">Select Team...</option>
+                      {teams.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 4: Sprint & Story Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Sprint Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sprint 1"
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={createFormData.sprintName}
+                    onChange={(e) => setCreateFormData({ ...createFormData, sprintName: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-foreground">Story Points</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-full text-xs p-2.5 bg-muted/20 border border-border/40 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={createFormData.storyPoints}
+                    onChange={(e) => setCreateFormData({ ...createFormData, storyPoints: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-border/30">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold border border-border/40 rounded-xl hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 text-xs font-bold bg-primary text-white rounded-xl shadow-md hover:bg-primary-hover transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Creating...' : 'Create Task Ticket'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Task Details Dialog Modal */}
       {detailModalOpen && selectedTask && (

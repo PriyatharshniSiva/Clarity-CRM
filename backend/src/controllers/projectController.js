@@ -2,6 +2,7 @@ const prisma = require('../utils/db');
 const { logActivity } = require('../utils/activityLogger');
 const { createNotification } = require('../services/notification');
 const { syncProjectLifecycleChatRoom } = require('../services/projectChatService');
+const { getIo } = require('../socket');
 
 /**
  * Generate Next Project Code (PRJ-1001, PRJ-1002...)
@@ -98,7 +99,7 @@ const createProject = async (req, res) => {
     }
 
     const projectCode = await generateProjectCode();
-    const initialStatus = status || 'DRAFT';
+    const initialStatus = (status && String(status).trim() !== '') ? status : 'ACTIVE';
     const isNowActive = initialStatus === 'ACTIVE';
 
     const project = await prisma.project.create({
@@ -166,7 +167,18 @@ const createProject = async (req, res) => {
     // Sync Chat Room Lifecycle
     await syncProjectLifecycleChatRoom(project.id);
 
+    // Broadcast project_created live Socket.IO event to all clients
+    try {
+      const io = getIo();
+      if (io) {
+        io.emit('project_created', project);
+      }
+    } catch (sockErr) {
+      console.error('[project_created Socket Error]:', sockErr);
+    }
+
     return res.status(201).json({
+      success: true,
       message: `Project ${project.projectCode} created successfully.`,
       project
     });

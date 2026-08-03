@@ -315,7 +315,7 @@ export default function AssignSalaryStructureModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/50 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
@@ -360,7 +360,7 @@ export default function AssignSalaryStructureModal({
                     onClick={() => setAssignmentType('SINGLE')}
                     className={`p-3.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       assignmentType === 'SINGLE'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        ? 'btn-primary shadow-md'
                         : 'bg-muted/30 hover:bg-muted text-muted-foreground border-border/60'
                     }`}
                   >
@@ -373,7 +373,7 @@ export default function AssignSalaryStructureModal({
                     onClick={() => setAssignmentType('BULK')}
                     className={`p-3.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       assignmentType === 'BULK'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        ? 'btn-primary shadow-md'
                         : 'bg-muted/30 hover:bg-muted text-muted-foreground border-border/60'
                     }`}
                   >
@@ -415,11 +415,11 @@ export default function AssignSalaryStructureModal({
                 <div className="space-y-3 p-4 rounded-2xl bg-muted/20 border border-border/60">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-emerald-500" />
+                      <Users className="w-4 h-4 text-primary" />
                       <span>Select Candidates for Bulk Assignment</span>
                     </label>
 
-                    <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-primary/10 text-primary border border-primary/20">
                       Selected: {selectedUserIds.length}
                     </span>
                   </div>
@@ -465,7 +465,7 @@ export default function AssignSalaryStructureModal({
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
-                      className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                      className="flex items-center gap-2 text-primary hover:text-primary-hover cursor-pointer"
                     >
                       {isAllCandidatesSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                       <span>Select All Filtered ({filteredCandidates.length})</span>
@@ -485,13 +485,13 @@ export default function AssignSalaryStructureModal({
                             onClick={() => handleToggleCandidate(emp.id)}
                             className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
                               selected
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground font-bold'
+                                ? 'bg-primary/10 border-primary/30 text-foreground font-bold'
                                 : 'bg-card border-border/50 text-muted-foreground hover:text-foreground'
                             }`}
                           >
                             <div className="flex items-center gap-2 text-xs">
                               {selected ? (
-                                <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
+                                <CheckSquare className="w-4 h-4 text-primary shrink-0" />
                               ) : (
                                 <Square className="w-4 h-4 text-muted-foreground shrink-0" />
                               )}
@@ -505,7 +505,7 @@ export default function AssignSalaryStructureModal({
                             </div>
 
                             {emp.salaryStructure && (
-                              <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+                              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 shrink-0">
                                 Assigned
                               </span>
                             )}
@@ -537,7 +537,7 @@ export default function AssignSalaryStructureModal({
               {/* 4. Earnings Components */}
               <div className="space-y-2 pt-1">
                 <span className="text-xs font-black uppercase text-foreground tracking-wider flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <TrendingUp className="w-4 h-4 text-primary" />
                   <span>Earnings Components (₹)</span>
                 </span>
 
@@ -704,7 +704,7 @@ export default function AssignSalaryStructureModal({
               {/* Live Summary Panel */}
               <div className="p-5 rounded-2xl bg-muted/30 border border-border/60 space-y-4">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-emerald-500" />
+                  <DollarSign className="w-4 h-4 text-primary" />
                   <span>Live Salary Summary Panel</span>
                 </span>
 
@@ -720,8 +720,8 @@ export default function AssignSalaryStructureModal({
                   </div>
 
                   <div className="flex items-center justify-between pt-2 text-sm font-black">
-                    <span className="text-emerald-700 dark:text-emerald-400">Net Monthly Salary</span>
-                    <span className="text-lg text-emerald-600 dark:text-emerald-400">{formatINR(calculatedNet)}</span>
+                    <span className="text-primary font-extrabold">Net Monthly Salary</span>
+                    <span className="text-lg text-primary font-black">{formatINR(calculatedNet)}</span>
                   </div>
                 </div>
               </div>
@@ -752,8 +752,8 @@ export default function AssignSalaryStructureModal({
               </div>
 
               {/* Bulk Preview & Confirmation Box */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-card to-card border border-emerald-500/30 space-y-3 text-xs shadow-sm">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-card to-card border border-primary/30 space-y-3 text-xs shadow-sm">
+                <span className="text-xs font-black uppercase tracking-wider text-primary block">
                   Assignment Confirmation Preview
                 </span>
 
@@ -772,13 +772,13 @@ export default function AssignSalaryStructureModal({
 
                   <div className="flex items-center justify-between pt-1.5">
                     <span className="text-muted-foreground">Net Pay per Employee</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatINR(calculatedNet)}</span>
+                    <span className="font-bold text-primary">{formatINR(calculatedNet)}</span>
                   </div>
 
                   {assignmentType === 'BULK' && (
                     <div className="flex items-center justify-between pt-1.5">
                       <span className="text-muted-foreground">Total Aggregate Commitment</span>
-                      <span className="font-black text-indigo-600 dark:text-indigo-400">{formatINR(totalAggregateCommitment)}</span>
+                      <span className="font-black text-secondary">{formatINR(totalAggregateCommitment)}</span>
                     </div>
                   )}
 
@@ -788,7 +788,7 @@ export default function AssignSalaryStructureModal({
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold text-center">
+                <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold text-center">
                   {assignmentType === 'SINGLE'
                     ? `Assign this structure to ${selectedSingleUser?.name || 'the employee'}?`
                     : `Assign this template to ${selectedUserIds.length} selected employees?`}
@@ -800,7 +800,7 @@ export default function AssignSalaryStructureModal({
                 <button
                   type="submit"
                   disabled={submitting || targetEmployeeCount === 0}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 btn-primary rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <span>Processing Assignment...</span>

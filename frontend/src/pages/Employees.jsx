@@ -714,10 +714,9 @@ const Employees = () => {
 
             {/* Compact Horizontal Profile Header Banner */}
             <div className="my-3 p-3.5 rounded-2xl bg-muted/30 border border-border/30 flex items-center gap-4">
-              <img
-                src={detailsModalUser.profilePic ? getUploadUrl(detailsModalUser.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${detailsModalUser.name}`}
-                className="h-14 w-14 rounded-2xl object-cover border-2 border-primary/20 shadow-sm shrink-0"
-                alt={detailsModalUser.name}
+              <UserAvatar
+                user={detailsModalUser}
+                className="h-14 w-14 rounded-2xl border-2 border-primary/20 shadow-sm shrink-0"
               />
               <div>
                 <div className="flex items-center gap-2">
@@ -734,26 +733,18 @@ const Employees = () => {
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => { setDetailsModalUser(null); navigate(`/chat?dm=${detailsModalUser.id}`); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-md shadow-primary/20 transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-md shadow-primary/20 transition-all active:scale-95 cursor-pointer"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span>Message</span>
                 </button>
                 <a
                   href={`mailto:${detailsModalUser.email}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-foreground text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-foreground text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                 >
                   <Mail className="h-3.5 w-3.5" />
                   <span>Email</span>
                 </a>
-                <button
-                  disabled
-                  title="Voice & Video calling coming soon"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 text-muted-foreground text-xs font-bold opacity-50 cursor-not-allowed"
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  <span>Call</span>
-                </button>
               </div>
             </div>
 

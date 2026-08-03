@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getUploadUrl } from '../services/api';
+import UserAvatar from '../components/common/UserAvatar';
 import {
   Plus,
   Users,
@@ -457,10 +457,9 @@ const Teams = () => {
                   <div className="rounded-xl border border-border/30 bg-muted/20 p-3.5">
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Team Leader</p>
                     <div className="flex items-center gap-2.5 mt-2">
-                      <img
-                        src={teamDetails.leader?.profilePic ? getUploadUrl(teamDetails.leader.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${teamDetails.leader?.name}`}
-                        className="h-8 w-8 rounded-full border object-cover"
-                        alt="avatar"
+                      <UserAvatar
+                        user={teamDetails.leader}
+                        className="h-8 w-8 rounded-full border"
                       />
                       <div>
                         <p className="text-xs font-bold">{teamDetails.leader?.name || 'Unassigned'}</p>
@@ -521,10 +520,9 @@ const Teams = () => {
                     ) : (
                       teamDetails.members.map((member) => (
                         <div key={member.id} className="flex items-center gap-3 rounded-xl border border-border/30 bg-card p-3 shadow-sm">
-                          <img
-                            src={member.user?.profilePic ? getUploadUrl(member.user.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${member.user?.name}`}
-                            className="h-10 w-10 rounded-xl border object-cover shrink-0"
-                            alt="avatar"
+                          <UserAvatar
+                            user={member.user}
+                            className="h-10 w-10 rounded-xl border shrink-0"
                           />
                           <div className="text-left min-w-0 flex-1">
                             <h4 className="text-xs font-bold text-foreground truncate">{member.user?.name}</h4>

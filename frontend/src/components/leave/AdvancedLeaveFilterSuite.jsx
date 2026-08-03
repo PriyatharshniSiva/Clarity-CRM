@@ -802,6 +802,109 @@ const AdvancedLeaveFilterSuite = ({ leaves = [], userRole = 'ADMIN', onRefresh }
               </div>
             </div>
 
+            {/* Step-by-Step Multi-Level Approval History Timeline */}
+            <div className="space-y-2 pt-2 border-t border-border/40">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase block">Approval Workflow Timeline</label>
+              <div className="p-4 rounded-2xl bg-muted/20 border border-border/50 space-y-3 text-xs">
+                {/* Step 1: Submission */}
+                <div className="flex items-start gap-3">
+                  <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 mt-0.5">
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground block">1. Leave Request Submitted</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Submitted on {new Date(selectedLeave.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step 2: Team Leader Review */}
+                <div className="flex items-start gap-3">
+                  <div className={`p-1 rounded-full border mt-0.5 ${
+                    selectedLeave.tlApprovalStatus === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30'
+                      : selectedLeave.tlApprovalStatus === 'REJECTED' || (selectedLeave.status === 'REJECTED' && selectedLeave.tlApprovalStatus === 'PENDING')
+                      ? 'bg-rose-500/20 text-rose-600 border-rose-500/30'
+                      : selectedLeave.tlApprovalStatus === 'NOT_REQUIRED'
+                      ? 'bg-muted text-muted-foreground border-border/60'
+                      : 'bg-amber-500/20 text-amber-600 border-amber-500/30'
+                  }`}>
+                    {selectedLeave.tlApprovalStatus === 'APPROVED' ? (
+                      <Check className="h-3 w-3 stroke-[3]" />
+                    ) : selectedLeave.tlApprovalStatus === 'REJECTED' || (selectedLeave.status === 'REJECTED' && selectedLeave.tlApprovalStatus === 'PENDING') ? (
+                      <X className="h-3 w-3 stroke-[3]" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground block">
+                      2. Team Leader Review:{' '}
+                      {selectedLeave.tlApprovalStatus === 'APPROVED'
+                        ? 'Approved'
+                        : selectedLeave.tlApprovalStatus === 'REJECTED'
+                        ? 'Rejected'
+                        : selectedLeave.tlApprovalStatus === 'NOT_REQUIRED'
+                        ? 'N/A (Direct Admin Workflow)'
+                        : 'Pending TL Approval'}
+                    </span>
+                    {selectedLeave.tlRemarks && (
+                      <span className="text-[11px] text-muted-foreground block font-medium mt-0.5">
+                        Remarks: "{selectedLeave.tlRemarks}"
+                      </span>
+                    )}
+                    {selectedLeave.tlApprovedAt && (
+                      <span className="text-[10px] text-muted-foreground font-mono block mt-0.5">
+                        Reviewed on {new Date(selectedLeave.tlApprovedAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 3: Admin Final Sanction */}
+                <div className="flex items-start gap-3">
+                  <div className={`p-1 rounded-full border mt-0.5 ${
+                    selectedLeave.adminApprovalStatus === 'APPROVED' || selectedLeave.status === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30'
+                      : selectedLeave.adminApprovalStatus === 'REJECTED' || selectedLeave.status === 'REJECTED'
+                      ? 'bg-rose-500/20 text-rose-600 border-rose-500/30'
+                      : 'bg-amber-500/20 text-amber-600 border-amber-500/30'
+                  }`}>
+                    {selectedLeave.adminApprovalStatus === 'APPROVED' || selectedLeave.status === 'APPROVED' ? (
+                      <Check className="h-3 w-3 stroke-[3]" />
+                    ) : selectedLeave.adminApprovalStatus === 'REJECTED' || selectedLeave.status === 'REJECTED' ? (
+                      <X className="h-3 w-3 stroke-[3]" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground block">
+                      3. Admin Final Sanction:{' '}
+                      {selectedLeave.status === 'APPROVED'
+                        ? 'Sanctioned & Approved'
+                        : selectedLeave.status === 'REJECTED'
+                        ? 'Rejected'
+                        : selectedLeave.status === 'PENDING_TL_APPROVAL'
+                        ? 'Awaiting TL Recommendation First'
+                        : 'Pending Admin Final Approval'}
+                    </span>
+                    {selectedLeave.adminRemarks && (
+                      <span className="text-[11px] text-muted-foreground block font-medium mt-0.5">
+                        Remarks: "{selectedLeave.adminRemarks}"
+                      </span>
+                    )}
+                    {selectedLeave.adminApprovedAt && (
+                      <span className="text-[10px] text-muted-foreground font-mono block mt-0.5">
+                        Sanctioned on {new Date(selectedLeave.adminApprovedAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Application Reason */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-muted-foreground uppercase block">Reason / Application Details</label>

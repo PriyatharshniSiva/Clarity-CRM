@@ -31,7 +31,6 @@ const getLeaves = async (req, res) => {
 
     // 1. Role Scoping
     if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
-      // Admin and Super Admin can view all leaves
       baseWhere = {};
     } else if (userRole === 'TEAM_LEADER') {
       const ledTeams = await prisma.team.findMany({
@@ -49,6 +48,7 @@ const getLeaves = async (req, res) => {
       baseWhere = {
         OR: [
           { userId: userId },
+          { submittedTeamLeaderId: userId },
           { userId: { in: memberUserIds } }
         ]
       };
@@ -58,14 +58,21 @@ const getLeaves = async (req, res) => {
 
     const andConditions = [];
 
-    // 2. Status Filter
+    // 2. Status Filter with Strict Scoping
     if (status && status !== 'ALL') {
-      if (status === 'PENDING') {
-        andConditions.push({
-          status: { in: ['PENDING', 'PENDING_TL_APPROVAL', 'PENDING_ADMIN_APPROVAL'] }
-        });
+      const normStatus = status.toUpperCase();
+      if (normStatus === 'PENDING') {
+        if (userRole === 'TEAM_LEADER') {
+          andConditions.push({ status: 'PENDING_TL_APPROVAL' });
+        } else if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+          andConditions.push({ status: 'PENDING_ADMIN_APPROVAL' });
+        } else {
+          andConditions.push({
+            status: { in: ['PENDING_TL_APPROVAL', 'PENDING_ADMIN_APPROVAL'] }
+          });
+        }
       } else {
-        andConditions.push({ status: status.toUpperCase() });
+        andConditions.push({ status: normStatus });
       }
     }
 
@@ -81,7 +88,6 @@ const getLeaves = async (req, res) => {
     }
 
     // 4. Date Overlap Filter
-    // Date overlap formula: leave.startDate <= filterEnd AND leave.endDate >= filterStart
     let filterStart = null;
     let filterEnd = null;
 
@@ -173,7 +179,7 @@ const getLeaves = async (req, res) => {
   }
 };
 
-// 2. Get Dynamic Leave Balances (Quota - Approved Leaves)
+// 2. Get Dynamic Leave Balances (Quota - APPROVED Leaves Only)
 const getLeaveBalances = async (req, res) => {
   try {
     const targetUserId = req.query.userId || req.user.id;
@@ -193,6 +199,7 @@ const getLeaveBalances = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
+    // Quota deduction applies ONLY after final Admin approval (status = 'APPROVED')
     const approvedLeaves = await prisma.leaveRequest.findMany({
       where: {
         userId: targetUserId,
@@ -251,13 +258,13 @@ const getLeaveBalances = async (req, res) => {
   }
 };
 
-// 3. Apply Leave (Intern, Employee, Team Leader only)
+// 3. Apply Leave (Snapshot Team ID & Leader ID, Multi-level Routing)
 const applyLeave = async (req, res) => {
   try {
     const userRole = req.user.role;
     const userId = req.user.id;
 
-    // Business Rule 1: Admin and Super Admin CANNOT apply for leave
+    // Rule 1: Admin and Super Admin CANNOT apply for leave
     if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
       return res.status(403).json({ message: 'Administrators and Super Admins cannot apply for leave.' });
     }
@@ -292,7 +299,7 @@ const applyLeave = async (req, res) => {
       return res.status(400).json({ message: 'Invalid leave type. Allowed: CASUAL, SICK, EMERGENCY, WFH.' });
     }
 
-    // Business Rule: Check available Leave Quota Balance (WFH is exempt)
+    // Check available Leave Quota Balance against APPROVED leaves only (WFH exempt)
     if (normalizedType !== 'WFH') {
       const userRecord = await prisma.user.findUnique({
         where: { id: userId },
@@ -332,7 +339,7 @@ const applyLeave = async (req, res) => {
       }
     }
 
-    // Business Rule 3: Prevent Overlapping Leave/WFH Requests
+    // Prevent Overlapping Active Leave/WFH Requests
     const overlapping = await prisma.leaveRequest.findFirst({
       where: {
         userId,
@@ -350,18 +357,20 @@ const applyLeave = async (req, res) => {
       });
     }
 
-    // Business Rule 2: Determine Approval Hierarchy
-    // Check if user belongs to a team with an assigned Team Leader
+    // Snapshot Team ID & Team Leader ID at creation time
     const teamMember = await prisma.teamMember.findFirst({
       where: { userId },
       include: {
         team: {
-          include: { leader: true }
+          select: { id: true, leaderId: true }
         }
       }
     });
 
-    const hasTeamLeader = teamMember?.team?.leaderId && teamMember.team.leaderId !== userId;
+    const submittedTeamId = teamMember?.team?.id || null;
+    const submittedTeamLeaderId = teamMember?.team?.leaderId || null;
+
+    const hasTeamLeader = submittedTeamLeaderId && submittedTeamLeaderId !== userId;
     let initialStatus = 'PENDING_ADMIN_APPROVAL';
     let tlApprovalStatus = 'NOT_REQUIRED';
 
@@ -381,6 +390,8 @@ const applyLeave = async (req, res) => {
         reason: reason || 'Leave Application',
         letterContent: letterContent || reason,
         contactPhone: contactPhone || null,
+        submittedTeamId,
+        submittedTeamLeaderId,
         status: initialStatus,
         tlApprovalStatus,
         adminApprovalStatus: 'PENDING'
@@ -389,27 +400,34 @@ const applyLeave = async (req, res) => {
 
     await logActivity({
       userId,
-      action: 'LEAVE_APPLY',
+      action: 'LEAVE_SUBMIT',
       details: `Applied for ${normalizedType} (${totalDays} days) from ${startDate} to ${endDate}`
     });
 
-    // Notifications based on hierarchy
-    if (initialStatus === 'PENDING_TL_APPROVAL' && teamMember?.team?.leaderId) {
-      // Notify assigned Team Leader
+    // 7-Stage Notification System Trigger (Step 1 & 2)
+    // 1. Notify Applicant
+    await createNotification({
+      userId,
+      title: 'Leave Request Submitted',
+      message: 'Leave request submitted successfully.',
+      type: 'LEAVE_SUBMITTED_SELF'
+    });
+
+    // 2. Notify Approvers based on hierarchy
+    if (initialStatus === 'PENDING_TL_APPROVAL' && submittedTeamLeaderId) {
       await createNotification({
-        userId: teamMember.team.leaderId,
-        title: 'Team Leave Request Submitted',
-        message: `${req.user.name} (${userRole}) submitted a ${normalizedType} request for ${totalDays} day(s). Action required.`,
+        userId: submittedTeamLeaderId,
+        title: 'New Leave Request Pending Approval',
+        message: `New leave request requires your approval (${req.user.name} - ${normalizedType}, ${totalDays} days).`,
         type: 'LEAVE_SUBMITTED_TL'
       });
     } else {
-      // Notify Admins
       const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
       for (const admin of admins) {
         await createNotification({
           userId: admin.id,
-          title: 'Leave Request Pending Approval',
-          message: `${req.user.name} (${userRole}) submitted a ${normalizedType} request for ${totalDays} day(s).`,
+          title: 'Leave Request Awaiting Final Approval',
+          message: `Leave request awaiting final approval (${req.user.name} - ${normalizedType}, ${totalDays} days).`,
           type: 'LEAVE_SUBMITTED_ADMIN'
         });
       }
@@ -428,6 +446,7 @@ const approveLeaveTL = async (req, res) => {
     const { id } = req.params;
     const { remarks } = req.body;
     const userRole = req.user.role;
+    const userId = req.user.id;
 
     if (userRole !== 'TEAM_LEADER' && userRole !== 'ADMIN') {
       return res.status(403).json({ message: 'Only Team Leaders or Admins can perform initial review.' });
@@ -446,37 +465,54 @@ const approveLeaveTL = async (req, res) => {
       return res.status(400).json({ message: 'This request is not pending Team Leader review.' });
     }
 
-    // Prevent Team Leader from approving another Team Leader's leave
-    if (userRole === 'TEAM_LEADER' && leave.user.role === 'TEAM_LEADER') {
-      return res.status(403).json({ message: 'Team Leaders cannot approve another Team Leader’s leave.' });
+    // Permission check: Must be assigned Team Leader at submission time or current team leader
+    if (userRole === 'TEAM_LEADER') {
+      if (leave.userId === userId) {
+        return res.status(403).json({ message: 'Team Leaders cannot approve their own leave request.' });
+      }
+      if (leave.user.role === 'TEAM_LEADER') {
+        return res.status(403).json({ message: 'Team Leaders cannot approve another Team Leader’s leave.' });
+      }
+      if (leave.submittedTeamLeaderId && leave.submittedTeamLeaderId !== userId) {
+        return res.status(403).json({ message: 'You can only approve leave requests for your assigned team members.' });
+      }
     }
 
     const updated = await prisma.leaveRequest.update({
       where: { id },
       data: {
         tlApprovalStatus: 'APPROVED',
-        tlApprovedById: req.user.id,
+        tlApprovedById: userId,
         tlApprovedAt: new Date(),
-        tlRemarks: remarks || 'Recommended by Team Leader',
+        tlRemarks: remarks || 'Approved by Team Leader',
         status: 'PENDING_ADMIN_APPROVAL'
       }
     });
 
-    // Notify Admins for Final Approval
+    // 7-Stage Notification System Trigger (Step 3 & 4)
+    // 3. Notify Employee
+    await createNotification({
+      userId: leave.userId,
+      title: 'Leave Request Approved by Team Leader',
+      message: 'Approved by Team Leader. Waiting for Admin approval.',
+      type: 'LEAVE_TL_APPROVED'
+    });
+
+    // 4. Notify Admins
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     for (const admin of admins) {
       await createNotification({
         userId: admin.id,
-        title: 'Leave Recommended by Team Leader',
-        message: `Leave request for ${leave.user.name} was approved by TL ${req.user.name} and requires your final sanction.`,
+        title: 'Leave Request Awaiting Final Approval',
+        message: `Leave request for ${leave.user.name} approved by TL and awaiting final approval.`,
         type: 'LEAVE_FORWARDED_ADMIN'
       });
     }
 
     await logActivity({
-      userId: req.user.id,
+      userId,
       action: 'LEAVE_TL_APPROVE',
-      details: `Team Leader recommended leave for ${leave.user.name}`
+      details: `Team Leader approved leave for ${leave.user.name}. Remarks: "${remarks || 'None'}"`
     });
 
     res.json(updated);
@@ -492,8 +528,8 @@ const approveLeaveAdmin = async (req, res) => {
     const { id } = req.params;
     const { remarks } = req.body;
     const userRole = req.user.role;
+    const userId = req.user.id;
 
-    // Business Rule 3: Super Admin CANNOT approve leave
     if (userRole === 'SUPER_ADMIN') {
       return res.status(403).json({ message: 'Super Admin is strictly read-only and cannot approve leave requests.' });
     }
@@ -511,22 +547,23 @@ const approveLeaveAdmin = async (req, res) => {
       return res.status(404).json({ message: 'Leave request not found.' });
     }
 
-    if (!['PENDING_ADMIN_APPROVAL', 'PENDING_TL_APPROVAL'].includes(leave.status)) {
-      return res.status(400).json({ message: 'Leave request is not pending approval.' });
+    // Strict Admin Queue: Admin acts ONLY on PENDING_ADMIN_APPROVAL
+    if (leave.status !== 'PENDING_ADMIN_APPROVAL') {
+      return res.status(400).json({ message: 'Leave request is not pending final Admin approval.' });
     }
 
     const updated = await prisma.leaveRequest.update({
       where: { id },
       data: {
         adminApprovalStatus: 'APPROVED',
-        adminApprovedById: req.user.id,
+        adminApprovedById: userId,
         adminApprovedAt: new Date(),
         adminRemarks: remarks || 'Sanctioned by Admin',
         status: 'APPROVED'
       }
     });
 
-    // Business Rule 11 & Rule 2: Attendance Integration & WFH vs LEAVE distinction
+    // Attendance Integration: Created or updated ONLY after final Admin approval
     const leaveType = (leave.leaveType || leave.type || 'CASUAL').toUpperCase();
     const attendanceStatus = leaveType === 'WFH' ? 'WORK_FROM_HOME' : 'LEAVE';
 
@@ -553,7 +590,7 @@ const approveLeaveAdmin = async (req, res) => {
           data: {
             status: attendanceStatus,
             workingHours: attendanceStatus === 'WORK_FROM_HOME' ? 8.0 : 0,
-            editedBy: req.user.id
+            editedBy: userId
           }
         });
       } else {
@@ -573,21 +610,18 @@ const approveLeaveAdmin = async (req, res) => {
       curr.setDate(curr.getDate() + 1);
     }
 
-    // Send final approval notification to Applicant
-    const formattedStart = new Date(leave.startDate).toLocaleDateString();
-    const formattedEnd = new Date(leave.endDate).toLocaleDateString();
-
+    // 7-Stage Notification System Trigger (Step 5)
     await createNotification({
       userId: leave.userId,
-      title: `Leave Request Approved (${attendanceStatus})`,
-      message: `Your ${leaveType} request for ${formattedStart} to ${formattedEnd} has been APPROVED by Admin. Attendance status set to ${attendanceStatus}.`,
+      title: 'Leave Request Approved',
+      message: 'Your leave has been approved.',
       type: 'LEAVE_APPROVED'
     });
 
     await logActivity({
-      userId: req.user.id,
-      action: 'LEAVE_FINAL_APPROVE',
-      details: `Admin final sanctioned ${leaveType} for ${leave.user.name}`
+      userId,
+      action: 'LEAVE_ADMIN_APPROVE',
+      details: `Admin final sanctioned ${leaveType} leave for ${leave.user.name}. Remarks: "${remarks || 'None'}"`
     });
 
     res.json(updated);
@@ -603,8 +637,8 @@ const rejectLeave = async (req, res) => {
     const { id } = req.params;
     const { remarks } = req.body;
     const userRole = req.user.role;
+    const userId = req.user.id;
 
-    // Business Rule 3: Super Admin CANNOT reject leave
     if (userRole === 'SUPER_ADMIN') {
       return res.status(403).json({ message: 'Super Admin is strictly read-only and cannot reject leave requests.' });
     }
@@ -622,32 +656,69 @@ const rejectLeave = async (req, res) => {
       return res.status(404).json({ message: 'Leave request not found.' });
     }
 
-    const updated = await prisma.leaveRequest.update({
-      where: { id },
-      data: {
-        status: 'REJECTED',
-        tlApprovalStatus: userRole === 'TEAM_LEADER' ? 'REJECTED' : leave.tlApprovalStatus,
-        tlRemarks: userRole === 'TEAM_LEADER' ? (remarks || 'Declined by Team Leader') : leave.tlRemarks,
-        adminApprovalStatus: userRole === 'ADMIN' ? 'REJECTED' : leave.adminApprovalStatus,
-        adminRemarks: userRole === 'ADMIN' ? (remarks || 'Declined by Admin') : leave.adminRemarks
+    let updated = null;
+
+    if (leave.status === 'PENDING_TL_APPROVAL') {
+      if (userRole !== 'TEAM_LEADER' && userRole !== 'ADMIN') {
+        return res.status(403).json({ message: 'Only Team Leaders or Admins can decline at this stage.' });
       }
-    });
 
-    const formattedStart = new Date(leave.startDate).toLocaleDateString();
-    const formattedEnd = new Date(leave.endDate).toLocaleDateString();
+      updated = await prisma.leaveRequest.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          tlApprovalStatus: 'REJECTED',
+          tlApprovedById: userId,
+          tlApprovedAt: new Date(),
+          tlRemarks: remarks || 'Declined by Team Leader'
+        }
+      });
 
-    await createNotification({
-      userId: leave.userId,
-      title: 'Leave Request Declined',
-      message: `Your leave request for ${formattedStart} to ${formattedEnd} was DECLINED by ${userRole}. Remarks: "${remarks || 'None'}".`,
-      type: 'LEAVE_REJECTED'
-    });
+      // 7-Stage Notification System Trigger (Step 7: TL Rejects)
+      await createNotification({
+        userId: leave.userId,
+        title: 'Leave Request Rejected',
+        message: 'Your leave has been rejected by your Team Leader.',
+        type: 'LEAVE_REJECTED_TL'
+      });
 
-    await logActivity({
-      userId: req.user.id,
-      action: 'LEAVE_REJECT',
-      details: `${userRole} declined leave request for ${leave.user.name}`
-    });
+      await logActivity({
+        userId,
+        action: 'LEAVE_REJECT',
+        details: `Team Leader declined leave for ${leave.user.name}. Remarks: "${remarks || 'None'}"`
+      });
+    } else if (leave.status === 'PENDING_ADMIN_APPROVAL') {
+      if (userRole !== 'ADMIN') {
+        return res.status(403).json({ message: 'Only Administrators can decline at this stage.' });
+      }
+
+      updated = await prisma.leaveRequest.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          adminApprovalStatus: 'REJECTED',
+          adminApprovedById: userId,
+          adminApprovedAt: new Date(),
+          adminRemarks: remarks || 'Declined by Admin'
+        }
+      });
+
+      // 7-Stage Notification System Trigger (Step 6: Admin Rejects)
+      await createNotification({
+        userId: leave.userId,
+        title: 'Leave Request Rejected',
+        message: 'Your leave has been rejected.',
+        type: 'LEAVE_REJECTED_ADMIN'
+      });
+
+      await logActivity({
+        userId,
+        action: 'LEAVE_REJECT',
+        details: `Admin declined leave for ${leave.user.name}. Remarks: "${remarks || 'None'}"`
+      });
+    } else {
+      return res.status(400).json({ message: 'Only pending leave requests can be rejected.' });
+    }
 
     res.json(updated);
   } catch (error) {
@@ -656,7 +727,7 @@ const rejectLeave = async (req, res) => {
   }
 };
 
-// 7. Cancel Pending Leave Request (Applicant only)
+// 7. Cancel Pending Leave Request (Applicant only - while pending)
 const cancelLeave = async (req, res) => {
   try {
     const { id } = req.params;
@@ -667,17 +738,24 @@ const cancelLeave = async (req, res) => {
       return res.status(404).json({ message: 'Leave request not found.' });
     }
 
-    if (leave.userId !== userId) {
+    if (leave.userId !== userId && req.user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'You can only cancel your own leave requests.' });
     }
 
-    if (leave.status === 'APPROVED') {
-      return res.status(400).json({ message: 'Approved leave requests cannot be cancelled.' });
+    // Cancellation Allowed ONLY while status is PENDING_TL_APPROVAL or PENDING_ADMIN_APPROVAL
+    if (!['PENDING_TL_APPROVAL', 'PENDING_ADMIN_APPROVAL'].includes(leave.status)) {
+      return res.status(400).json({ message: 'Once approved or finalized, leave requests cannot be cancelled by employees.' });
     }
 
     const updated = await prisma.leaveRequest.update({
       where: { id },
       data: { status: 'CANCELLED' }
+    });
+
+    await logActivity({
+      userId,
+      action: 'LEAVE_CANCEL',
+      details: `Cancelled pending leave request (${leave.leaveType})`
     });
 
     res.json(updated);

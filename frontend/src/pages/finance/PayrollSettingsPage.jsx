@@ -101,7 +101,7 @@ export default function PayrollSettingsPage() {
       <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
-            <Settings className="w-6 h-6 text-emerald-600" /> Global Payroll Configurations
+            <Settings className="w-6 h-6 text-primary" /> Global Payroll Configurations
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Set salary cycle dates, deduction rules, overtime rates, and company payslip headers.
@@ -217,7 +217,7 @@ export default function PayrollSettingsPage() {
                 onChange={e => setFormData({ ...formData, payslipTemplate: e.target.value })}
                 className="w-full bg-muted/50 border border-border rounded-xl p-2.5 text-foreground"
               >
-                <option value="STANDARD">STANDARD (Emerald Enterprise)</option>
+                <option value="STANDARD">STANDARD (Enterprise)</option>
                 <option value="COMPACT">COMPACT</option>
                 <option value="EXECUTIVE">EXECUTIVE</option>
               </select>
@@ -262,7 +262,7 @@ export default function PayrollSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2"
+              className="px-6 py-2.5 btn-primary rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2"
             >
               <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Configuration'}
             </button>

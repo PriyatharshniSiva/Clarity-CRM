@@ -375,11 +375,10 @@ export default function SalaryStructuresPage() {
       {/* Toast Notification */}
       {notification && (
         <div
-          className={`fixed top-5 right-5 z-50 p-4 rounded-2xl shadow-2xl border text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3 ${
-            notification.type === 'error'
+          className={`fixed top-5 right-5 z-50 p-4 rounded-2xl shadow-2xl border text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3 ${notification.type === 'error'
               ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
-              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-          }`}
+              : 'bg-success/10 border-success/20 text-success'
+            }`}
         >
           {notification.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{notification.message}</span>
@@ -390,7 +389,7 @@ export default function SalaryStructuresPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border border-border/70 p-6 rounded-3xl shadow-sm">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
               <Users className="w-6 h-6" />
             </div>
             <div>
@@ -414,7 +413,7 @@ export default function SalaryStructuresPage() {
         {isAdmin && (
           <button
             onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-2 btn-primary font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Assign Structure</span>
@@ -430,10 +429,10 @@ export default function SalaryStructuresPage() {
           <span className="text-[10px] text-muted-foreground mt-0.5">Active Employees</span>
         </div>
 
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">Assigned</span>
-          <span className="text-2xl font-black text-emerald-500 mt-2">{stats.assignedCount}</span>
-          <span className="text-[10px] text-emerald-600/80 mt-0.5">Active Salary Structures</span>
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Assigned</span>
+          <span className="text-2xl font-black text-primary mt-2">{stats.assignedCount}</span>
+          <span className="text-[10px] text-primary/80 mt-0.5">Active Salary Structures</span>
         </div>
 
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 shadow-xs flex flex-col justify-between">
@@ -460,7 +459,7 @@ export default function SalaryStructuresPage() {
               placeholder="Search Name or Employee ID..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 bg-muted/30 border border-border/60 rounded-xl text-xs font-semibold text-foreground focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full h-9 pl-9 pr-3 bg-muted/30 border border-border/60 rounded-xl text-xs font-semibold text-foreground focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -510,7 +509,7 @@ export default function SalaryStructuresPage() {
       {/* 4. Simplified Compact Employee Salary Table */}
       {loading ? (
         <div className="p-12 text-center text-xs text-muted-foreground font-medium">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mb-2" />
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mb-2" />
           <p className="text-sm font-semibold text-foreground">Loading employee salary structures...</p>
         </div>
       ) : (
@@ -552,7 +551,7 @@ export default function SalaryStructuresPage() {
                           <div className="flex items-center gap-3">
                             <UserAvatar user={emp} className="h-9 w-9 rounded-full border border-primary/20 shrink-0" />
                             <div>
-                              <span className="font-bold text-foreground group-hover:text-emerald-600 transition-colors block text-sm whitespace-nowrap">
+                              <span className="font-bold text-foreground group-hover:text-primary transition-colors block text-sm whitespace-nowrap">
                                 {emp.name}
                               </span>
                               <span className="text-xs text-muted-foreground font-mono block">
@@ -575,8 +574,8 @@ export default function SalaryStructuresPage() {
                         {/* Template Badge */}
                         <td className="py-4 px-4 whitespace-nowrap">
                           {hasStructure ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                              <Sparkles className="w-3.5 h-3.5 text-primary" />
                               <span>{s.template?.name || 'Custom Structure'}</span>
                             </span>
                           ) : (
@@ -589,7 +588,7 @@ export default function SalaryStructuresPage() {
                         {/* Net Pay Only */}
                         <td className="py-4 px-4 whitespace-nowrap">
                           {hasStructure ? (
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            <span className="text-sm font-black text-primary">
                               {formatINR(s.netSalary)}
                             </span>
                           ) : (
@@ -626,13 +625,12 @@ export default function SalaryStructuresPage() {
                                   e.stopPropagation();
                                   handleOpenEditModal(emp);
                                 }}
-                                className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-                                  hasStructure
+                                className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${hasStructure
                                     ? 'bg-card hover:bg-muted text-foreground border border-border/70'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                }`}
+                                    : 'btn-primary'
+                                  }`}
                               >
-                                {hasStructure ? <Edit2 className="w-3.5 h-3.5 text-emerald-500" /> : <Plus className="w-3.5 h-3.5 stroke-[3]" />}
+                                {hasStructure ? <Edit2 className="w-3.5 h-3.5 text-primary" /> : <Plus className="w-3.5 h-3.5 stroke-[3]" />}
                                 <span>{hasStructure ? 'Adjust' : 'Assign'}</span>
                               </button>
                             ) : (
@@ -671,7 +669,7 @@ export default function SalaryStructuresPage() {
             {/* Drawer Header */}
             <div className="flex items-center justify-between border-b border-border/50 pb-4">
               <span className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <DollarSign className="w-4 h-4 text-primary" />
                 <span>Employee Salary Details</span>
               </span>
               <button
@@ -684,14 +682,15 @@ export default function SalaryStructuresPage() {
 
             {/* Employee Profile Info Card */}
             <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 flex items-center gap-4">
-              <UserAvatar user={drawerEmployee} className="h-14 w-14 rounded-full border-2 border-emerald-500/30 shrink-0" />
-              <div className="space-y-0.5 flex-1 min-w-0">
-                <h3 className="text-lg font-black text-foreground truncate">{drawerEmployee.name}</h3>
-                <p className="text-xs font-mono text-muted-foreground truncate">{drawerEmployee.email}</p>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    {drawerEmployee.role}
-                  </span>
+              <UserAvatar user={drawerEmployee} className="h-14 w-14 rounded-full border-2 border-primary/30 shrink-0" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-foreground text-lg leading-tight truncate">{drawerEmployee.name}</h3>
+                  {drawerEmployee.salaryStructure && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-primary/10 text-primary border border-primary/20">
+                      {drawerEmployee.role}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground font-semibold">
                     {drawerEmployee.department || 'General'}
                   </span>
@@ -703,12 +702,12 @@ export default function SalaryStructuresPage() {
             </div>
 
             {/* Prominent Net Salary Highlight Card */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-card border border-emerald-500/30 space-y-1 shadow-sm">
-              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
-                Net Monthly Take-Home Salary
+            <div className="p-5 rounded-2xl bg-primary/10 border border-primary/30 space-y-1 shadow-sm">
+              <span className="text-[11px] font-black uppercase tracking-wider text-primary block">
+                Net Monthly Take-Home Pay
               </span>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                <span className="text-3xl font-black text-primary">
                   {drawerEmployee.salaryStructure ? formatINR(drawerEmployee.salaryStructure.netSalary) : 'Not Assigned'}
                 </span>
                 {drawerEmployee.salaryStructure && (
@@ -728,10 +727,10 @@ export default function SalaryStructuresPage() {
                 <div className="p-4 rounded-2xl bg-card border border-border/70 space-y-3">
                   <div className="flex items-center justify-between border-b border-border/40 pb-2">
                     <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                      <span>Earnings Breakdown</span>
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-bold text-foreground">Annual Gross CTC</span>
                     </span>
-                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                    <span className="text-xs font-black text-primary">
                       Gross: {formatINR(drawerEmployee.salaryStructure.grossSalary)}
                     </span>
                   </div>
@@ -832,7 +831,7 @@ export default function SalaryStructuresPage() {
                       setDrawerEmployee(null);
                       handleOpenEditModal(emp);
                     }}
-                    className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    className="py-2.5 px-3 btn-primary rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>{drawerEmployee.salaryStructure ? 'Edit Structure' : 'Assign Structure'}</span>
@@ -906,18 +905,20 @@ export default function SalaryStructuresPage() {
             {/* Live Salary Summary Banner inside Modal */}
             <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-emerald-500" />
-                  <span>Live Salary Summary</span>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  <span className="font-extrabold text-foreground">Structure Editor</span>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Modifying compensation breakdown
                 </span>
 
                 {selectedUser.salaryStructure && netDifference !== 0 && (
                   <div
-                    className={`px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1 border ${
-                      netDifference > 0
-                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                    className={`px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1 border ${netDifference > 0
+                        ? 'bg-primary/10 text-primary border-primary/20'
                         : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                    }`}
+                      }`}
                   >
                     {netDifference > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     <span>
@@ -939,9 +940,9 @@ export default function SalaryStructuresPage() {
                   <span className="text-base font-black text-rose-500 mt-0.5 block">{formatINR(calculatedDeductions)}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] font-extrabold uppercase text-emerald-700 dark:text-emerald-400 block">Net Monthly Salary</span>
-                  <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">{formatINR(calculatedNet)}</span>
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                  <span className="text-[10px] font-extrabold uppercase text-primary block">Net Monthly Salary</span>
+                  <span className="text-lg font-black text-primary mt-0.5 block">{formatINR(calculatedNet)}</span>
                 </div>
               </div>
             </div>
@@ -980,7 +981,7 @@ export default function SalaryStructuresPage() {
               {/* Earnings Components Section */}
               <div className="space-y-2">
                 <div className="font-black text-foreground text-xs uppercase tracking-wider border-b border-border/40 pb-1.5 flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <TrendingUp className="w-4 h-4 text-primary" />
                   <span>1. Earnings Components (₹)</span>
                 </div>
 
@@ -1199,7 +1200,7 @@ export default function SalaryStructuresPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-5 py-2 btn-primary rounded-xl font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {submitting ? (
                         <span>Saving...</span>
@@ -1261,6 +1262,7 @@ export default function SalaryStructuresPage() {
                 {revisions.map((rev) => {
                   const isInc = rev.changeAmount > 0;
                   const isDec = rev.changeAmount < 0;
+                  const diff = rev.changeAmount;
 
                   return (
                     <div
@@ -1270,13 +1272,12 @@ export default function SalaryStructuresPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                              isInc
-                                ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isInc
+                                ? 'bg-primary/10 text-primary border border-primary/20'
                                 : isDec
-                                ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                                : 'bg-slate-500/10 text-slate-600 border border-slate-500/20'
-                            }`}
+                                  ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                                  : 'bg-slate-500/10 text-slate-600 border border-slate-500/20'
+                              }`}
                           >
                             {rev.revisionType}
                           </span>
@@ -1290,9 +1291,8 @@ export default function SalaryStructuresPage() {
                         </div>
 
                         <span
-                          className={`font-extrabold font-mono text-xs ${
-                            isInc ? 'text-emerald-500' : isDec ? 'text-rose-500' : 'text-foreground'
-                          }`}
+                          className={`font-extrabold font-mono text-xs ${isInc ? 'text-primary' : isDec ? 'text-rose-500' : 'text-foreground'
+                            }`}
                         >
                           {isInc ? '+' : ''}
                           {formatINR(rev.changeAmount)}
@@ -1302,7 +1302,7 @@ export default function SalaryStructuresPage() {
                       <div className="flex items-center gap-3 font-bold text-foreground">
                         <span>Previous: {formatINR(rev.previousSalary)}</span>
                         <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-emerald-600 dark:text-emerald-400">New Net: {formatINR(rev.newSalary)}</span>
+                        <span className="text-primary">New Net: {formatINR(rev.newSalary)}</span>
                       </div>
 
                       <div className="text-muted-foreground">

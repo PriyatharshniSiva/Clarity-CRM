@@ -82,12 +82,16 @@ const login = async (req, res) => {
       ipAddress: ip
     });
 
-    // Strip password
+    // Strip password and attach canonical profilePhoto field
     const { password: _, ...userWithoutPassword } = user;
+    const formattedUser = {
+      ...userWithoutPassword,
+      profilePhoto: userWithoutPassword.profilePic || null
+    };
 
     res.json({
       token,
-      user: userWithoutPassword,
+      user: formattedUser,
       isTempPassword
     });
   } catch (error) {
@@ -112,7 +116,10 @@ const getProfile = async (req, res) => {
     });
 
     const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    res.json({
+      ...userWithoutPassword,
+      profilePhoto: userWithoutPassword.profilePic || null
+    });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ message: 'Failed to retrieve profile.' });

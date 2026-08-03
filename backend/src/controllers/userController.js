@@ -225,7 +225,10 @@ const getAllUsers = async (req, res) => {
 
     const usersWithoutPassword = users.map((u) => {
       const { password, ...details } = u;
-      return details;
+      return {
+        ...details,
+        profilePhoto: details.profilePic || null
+      };
     });
 
     res.json({

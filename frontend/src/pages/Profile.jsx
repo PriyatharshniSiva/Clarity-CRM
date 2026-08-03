@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api, { getUploadUrl } from '../services/api';
+import UserAvatar from '../components/common/UserAvatar';
 import {
   User,
   Phone,
@@ -188,11 +189,18 @@ const Profile = () => {
         {/* Profile Card & Avatar */}
         <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-md text-center flex flex-col items-center justify-center">
           <div className="relative group">
-            <img
-              src={previewUrl || (user?.profilePic ? getUploadUrl(user.profilePic) : `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`)}
-              alt={user?.name}
-              className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/20 shadow-lg transition-all group-hover:opacity-90"
-            />
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt={user?.name}
+                className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/20 shadow-lg"
+              />
+            ) : (
+              <UserAvatar
+                user={user}
+                className="h-28 w-28 rounded-2xl ring-4 ring-primary/20 shadow-lg text-3xl font-black"
+              />
+            )}
             <input
               type="file"
               className="hidden"
