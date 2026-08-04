@@ -1,8 +1,8 @@
 ================================================================================
-                    MRF CRM ROLE & PERMISSIONS CLARIFICATION
+                    INNOVEITY CRM ROLE & PERMISSIONS CLARIFICATION
 ================================================================================
 
-This document details the responsibilities, actions, and features available for each of the three user roles (ADMIN, TEAM_LEADER, INTERN) defined within the MRF Enterprise CRM.
+This document details the responsibilities, actions, and features available for each of the three user roles (ADMIN, TEAM_LEADER, INTERN) defined within the Innoveity Enterprise CRM.
 
 --------------------------------------------------------------------------------
 1. ADMIN ROLE

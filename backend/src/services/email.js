@@ -54,7 +54,7 @@ const getTransporter = async () => {
 
 const sendWelcomeEmail = async (user, temporaryPassword) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   const mailOptions = {
@@ -102,7 +102,7 @@ const sendWelcomeEmail = async (user, temporaryPassword) => {
 
 const sendTaskAssignmentEmail = async (assignee, task, creator) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const taskBoardUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks`;
 
   const mailOptions = {
@@ -147,7 +147,7 @@ const sendTaskAssignmentEmail = async (assignee, task, creator) => {
 
 const sendNewTicketNotificationEmail = async (admin, ticket, creator) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const ticketsUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tickets`;
 
   const mailOptions = {
@@ -190,7 +190,7 @@ const sendNewTicketNotificationEmail = async (admin, ticket, creator) => {
 
 const sendTicketUpdateEmail = async (creator, ticket, message) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const ticketsUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tickets`;
 
   const mailOptions = {
@@ -231,7 +231,7 @@ const sendTicketUpdateEmail = async (creator, ticket, message) => {
 
 const sendTaskStatusUpdateEmail = async (recipient, task, intern, status) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const taskBoardUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks`;
 
   let actionText = status === 'IN_PROGRESS' ? 'started working on' : 'submitted work for review on';
@@ -273,7 +273,7 @@ const sendTaskStatusUpdateEmail = async (recipient, task, intern, status) => {
 
 const sendTeamTaskAssignmentEmail = async (team, task, creator, leader, members) => {
   const mailTransporter = await getTransporter();
-  const companyName = process.env.COMPANY_NAME || 'MRF Enterprise';
+  const companyName = process.env.COMPANY_NAME || 'Innoveity';
   const taskBoardUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tasks`;
 
   // 1. Notify the Team Leader (if exists)

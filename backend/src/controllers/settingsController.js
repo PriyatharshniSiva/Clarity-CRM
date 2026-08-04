@@ -18,7 +18,7 @@ const getSettings = async (req, res) => {
           internShiftEnd: '18:30',
           tlShiftStart: '09:30',
           tlShiftEnd: '18:30',
-          officeLocationName: 'MRF Headquarters',
+          officeLocationName: 'Innoveity Headquarters',
           earlyWindowMinutes: 30,
           gracePeriodMinutes: 15
         }
@@ -86,7 +86,7 @@ const updateSettings = async (req, res) => {
         officeLatitude: officeLatitude || 12.971598,
         officeLongitude: officeLongitude || 77.594562,
         allowedRadiusMeters: allowedRadiusMeters || 200.0,
-        officeLocationName: officeLocationName || 'MRF Headquarters',
+        officeLocationName: officeLocationName || 'Innoveity Headquarters',
         earlyWindowMinutes: earlyWindowMinutes !== undefined ? earlyWindowMinutes : 30,
         gracePeriodMinutes: gracePeriodMinutes !== undefined ? gracePeriodMinutes : 15
       }

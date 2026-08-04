@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import api from '../services/api';
+import api, { getSocket } from '../services/api';
 import UserAvatar from '../components/common/UserAvatar';
 import EmployeeDashboard from '../components/dashboard/EmployeeDashboard';
 import TeamLeaderDashboard from '../components/dashboard/TeamLeaderDashboard';
@@ -316,8 +316,39 @@ const Dashboard = () => {
     }
   };
 
+  const [clockInStatus, setClockInStatus] = useState(null);
+
   useEffect(() => {
     fetchDashboardData();
+
+    const fetchStatus = async () => {
+      try {
+        const res = await api.get('/attendance/status');
+        setClockInStatus(res.data);
+        if (res.data.existingRecord) {
+          setClockedRecord(res.data.existingRecord);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStatus();
+
+    const socket = getSocket();
+    if (socket) {
+      const handleAttendanceEvent = () => {
+        fetchDashboardData();
+        fetchStatus();
+      };
+      socket.on('attendance_clock_in', handleAttendanceEvent);
+      socket.on('attendance_clock_out', handleAttendanceEvent);
+      socket.on('attendance_updated', handleAttendanceEvent);
+      return () => {
+        socket.off('attendance_clock_in', handleAttendanceEvent);
+        socket.off('attendance_clock_out', handleAttendanceEvent);
+        socket.off('attendance_updated', handleAttendanceEvent);
+      };
+    }
   }, [user]);
 
   useEffect(() => {
@@ -509,30 +540,22 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {!clockedRecord ? (
-                <button
-                  onClick={handleClockIn}
-                  disabled={clockLoading}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Play className="h-4 w-4 fill-current" />
-                  <span>Clock In</span>
-                </button>
-              ) : !clockedRecord.clockOut ? (
-                <button
-                  onClick={handleClockOut}
-                  disabled={clockLoading}
-                  className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-rose-600/25 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Square className="h-3.5 w-3.5 fill-current" />
-                  <span>Clock Out</span>
-                </button>
-              ) : (
-                <div className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full">
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <span>Attendance Logged</span>
-                </div>
-              )}
+              <button
+                onClick={handleClockIn}
+                disabled={clockLoading || !clockInStatus?.canClockIn}
+                className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Play className="h-4 w-4 fill-current" />
+                <span>Clock In</span>
+              </button>
+              <button
+                onClick={handleClockOut}
+                disabled={clockLoading || !clockInStatus?.canClockOut}
+                className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white px-6 py-2.5 rounded-full text-xs font-extrabold shadow-md shadow-rose-600/25 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+                <span>Clock Out</span>
+              </button>
             </div>
           </div>
         )}

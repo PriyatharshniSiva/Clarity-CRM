@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import api from '../../services/api';
+import api, { getSocket } from '../../services/api';
 import UserAvatar from '../common/UserAvatar';
 import TeamLeaderLeaveWidget from './TeamLeaderLeaveWidget';
 import LeaveOverviewCard from './LeaveOverviewCard';
@@ -181,6 +181,21 @@ export const TeamLeaderDashboard = () => {
 
   useEffect(() => {
     fetchTLDashboardData();
+
+    const socket = getSocket();
+    if (socket) {
+      const handleAttendanceEvent = () => {
+        fetchTLDashboardData();
+      };
+      socket.on('attendance_clock_in', handleAttendanceEvent);
+      socket.on('attendance_clock_out', handleAttendanceEvent);
+      socket.on('attendance_updated', handleAttendanceEvent);
+      return () => {
+        socket.off('attendance_clock_in', handleAttendanceEvent);
+        socket.off('attendance_clock_out', handleAttendanceEvent);
+        socket.off('attendance_updated', handleAttendanceEvent);
+      };
+    }
   }, [user]);
 
   const fetchLeaveBalances = async () => {
@@ -623,30 +638,22 @@ export const TeamLeaderDashboard = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {!clockedRecord ? (
-                <button
-                  onClick={handleClockIn}
-                  disabled={clockLoading}
-                  className="flex items-center gap-1.5 btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                  <span>Clock In</span>
-                </button>
-              ) : !clockedRecord.clockOut ? (
-                <button
-                  onClick={handleClockOut}
-                  disabled={clockLoading}
-                  className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  <Square className="h-3.5 w-3.5 fill-current" />
-                  <span>Clock Out</span>
-                </button>
-              ) : (
-                <div className="px-3 py-1.5 rounded-xl bg-success/10 text-success border border-success/20 text-xs font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>Shift Completed</span>
-                </div>
-              )}
+              <button
+                onClick={handleClockIn}
+                disabled={clockLoading || !clockStatus?.canClockIn}
+                className="flex items-center gap-1.5 btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+                <span>Clock In</span>
+              </button>
+              <button
+                onClick={handleClockOut}
+                disabled={clockLoading || !clockStatus?.canClockOut}
+                className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+                <span>Clock Out</span>
+              </button>
             </div>
           </div>
         </div>

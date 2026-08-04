@@ -1,5 +1,5 @@
 ========================================================================
-                      MRF ENTERPRISE CRM WORKFLOW
+                      INNOVEITY ENTERPRISE CRM WORKFLOW
 ========================================================================
 `
 This document details the overall system architecture, data models, 

@@ -22,7 +22,7 @@ const generateSummary = async (context) => {
 
 const getProviderMetadata = () => {
   return {
-    engine: 'MRF-AI',
+    engine: 'Innoveity-AI',
     engineVersion: '3.0.0',
     rulesVersion: '1.2.0',
     llmVersion: currentProvider.providerName

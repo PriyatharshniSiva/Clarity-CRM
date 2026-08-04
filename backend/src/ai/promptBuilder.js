@@ -1,5 +1,5 @@
 const buildExecutiveSummaryPrompt = (context) => {
-  return `Synthesize an executive summary for MRF-CRM based on the following project context:
+  return `Synthesize an executive summary for Innoveity CRM based on the following project context:
 - Total Projects: ${context.totalProjects}
 - Healthy Projects: ${context.healthyProjects}
 - At Risk Projects: ${context.atRiskProjects}

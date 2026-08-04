@@ -63,7 +63,7 @@ export default function PayrollSettingsPage() {
         minimumWorkingHours: formData.minimumWorkingHours !== '' ? Number(formData.minimumWorkingHours) : Number(savedSettings?.minimumWorkingHours || 4.0),
         roundingRule: savedSettings?.roundingRule || 'ROUND_HALF_UP',
         payslipTemplate: formData.payslipTemplate || savedSettings?.payslipTemplate || 'STANDARD',
-        companyName: formData.companyName !== '' ? formData.companyName.trim() : (savedSettings?.companyName || 'MCC - MRF Innovation Park'),
+        companyName: formData.companyName !== '' ? formData.companyName.trim() : (savedSettings?.companyName || 'Innoveity'),
         companyAddress: formData.companyAddress !== '' ? formData.companyAddress.trim() : (savedSettings?.companyAddress || 'Chennai, Tamil Nadu'),
         authorizedSignature: formData.authorizedSignature !== '' ? formData.authorizedSignature.trim() : (savedSettings?.authorizedSignature || 'HR Manager')
       };
@@ -233,7 +233,7 @@ export default function PayrollSettingsPage() {
                 value={formData.companyName}
                 onChange={e => setFormData({ ...formData, companyName: e.target.value })}
                 className="w-full bg-muted/50 border border-border rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground/60"
-                placeholder={savedSettings?.companyName ? `Eg. ${savedSettings.companyName}` : "Eg. MCC - MRF Innovation Park"}
+                placeholder={savedSettings?.companyName ? `Eg. ${savedSettings.companyName}` : "Eg. Innoveity"}
               />
             </div>
             <div>

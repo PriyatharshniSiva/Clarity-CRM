@@ -1,6 +1,12 @@
 const prisma = require('../utils/db');
 const { logActivity } = require('../utils/activityLogger');
 const { createNotification } = require('../services/notification');
+const { broadcastAttendanceEvent } = require('../socket');
+const {
+  getSystemTimeZone,
+  getTodayZonedDate,
+  validateAttendanceWindow
+} = require('../utils/attendanceUtils');
 
 // Helper to parse User Agent details
 const parseUserAgent = (userAgentString) => {
@@ -11,7 +17,6 @@ const parseUserAgent = (userAgentString) => {
 
   const ua = userAgentString.toLowerCase();
 
-  // Simple browser detection
   if (ua.includes('firefox')) {
     browser = 'Firefox';
   } else if (ua.includes('chrome') && !ua.includes('chromium')) {
@@ -24,7 +29,6 @@ const parseUserAgent = (userAgentString) => {
     browser = 'Opera';
   }
 
-  // Simple device detection
   if (ua.includes('mobi') || ua.includes('android') || ua.includes('iphone')) {
     device = 'Mobile';
   } else if (ua.includes('ipad') || ua.includes('tablet')) {
@@ -34,48 +38,14 @@ const parseUserAgent = (userAgentString) => {
   return { browser, device };
 };
 
-// Helper to format time into 12-hour AM/PM string
-const format12Hour = (dateObj) => {
-  return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-};
-
-// Helper to compute clock-in window times based on user role and system settings
-const calculateClockInWindow = (role, settings, now = new Date()) => {
-  const shiftStartStr = (role === 'TEAM_LEADER' || role === 'ADMIN')
-    ? (settings?.tlShiftStart || '09:30')
-    : (settings?.internShiftStart || '09:30');
-
-  const earlyWindowMins = settings?.earlyWindowMinutes !== undefined ? settings.earlyWindowMinutes : 30;
-  const gracePeriodMins = settings?.gracePeriodMinutes !== undefined ? settings.gracePeriodMinutes : 15;
-
-  const [startHour, startMin] = shiftStartStr.split(':').map(Number);
-
-  const shiftStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMin, 0, 0);
-  const windowOpen = new Date(shiftStart.getTime() - earlyWindowMins * 60 * 1000);
-  const windowClose = new Date(shiftStart.getTime() + gracePeriodMins * 60 * 1000);
-
-  return {
-    shiftStartStr,
-    earlyWindowMins,
-    gracePeriodMins,
-    shiftStart,
-    windowOpen,
-    windowClose,
-    windowOpenFormatted: format12Hour(windowOpen),
-    shiftStartFormatted: format12Hour(shiftStart),
-    windowCloseFormatted: format12Hour(windowClose)
-  };
-};
-
 const getClockInStatus = async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
-    const localDateStr = now.toLocaleDateString('en-CA');
-    const todayDate = new Date(localDateStr + 'T00:00:00.000Z');
 
-    let settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
-    const windowInfo = calculateClockInWindow(req.user.role, settings, now);
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+    const todayDate = getTodayZonedDate(now, timeZone);
 
     // Check existing attendance for today
     const existing = await prisma.attendance.findUnique({
@@ -92,36 +62,22 @@ const getClockInStatus = async (req, res) => {
       }
     });
 
-    let state = 'BEFORE_WINDOW';
-    if (existing) {
-      state = 'ALREADY_CLOCKED_IN';
-    } else if (approvedLeave && approvedLeave.type === 'WFH') {
-      state = 'APPROVED_WFH';
-    } else if (now < windowInfo.windowOpen) {
-      state = 'BEFORE_WINDOW';
-    } else if (now >= windowInfo.windowOpen && now <= windowInfo.windowClose) {
-      state = 'OPEN_ON_TIME';
-    } else {
-      state = 'OPEN_LATE';
-    }
+    const validation = validateAttendanceWindow({
+      userRole: req.user.role,
+      settings,
+      attendanceRecord: existing,
+      approvedLeave,
+      now
+    });
 
     res.json({
-      serverTime: now.toISOString(),
-      state,
+      ...validation,
       existingRecord: existing || null,
-      approvedLeave: approvedLeave || null,
-      windowOpenTime: windowInfo.windowOpen.toISOString(),
-      shiftStartTime: windowInfo.shiftStart.toISOString(),
-      windowCloseTime: windowInfo.windowClose.toISOString(),
-      windowOpenFormatted: windowInfo.windowOpenFormatted,
-      shiftStartFormatted: windowInfo.shiftStartFormatted,
-      windowCloseFormatted: windowInfo.windowCloseFormatted,
-      earlyWindowMins: windowInfo.earlyWindowMins,
-      gracePeriodMins: windowInfo.gracePeriodMins
+      approvedLeave: approvedLeave || null
     });
   } catch (error) {
     console.error('Get clock-in status error:', error);
-    res.status(500).json({ message: 'Failed to retrieve clock-in status.' });
+    res.status(500).json({ success: false, reason: 'SERVER_ERROR', message: 'Failed to retrieve clock-in status.' });
   }
 };
 
@@ -129,35 +85,30 @@ const clockIn = async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
-    const localDateStr = now.toLocaleDateString('en-CA');
-    const todayDate = new Date(localDateStr + 'T00:00:00.000Z');
+
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+    const todayDate = getTodayZonedDate(now, timeZone);
 
     // Check if user already clocked in today
     const existing = await prisma.attendance.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: todayDate
-        }
-      }
+      where: { userId_date: { userId, date: todayDate } }
     });
 
     if (existing) {
       if (existing.status === 'ABSENT' && existing.clockInLocation?.includes('Declined')) {
         return res.status(400).json({ 
+          success: false,
+          reason: 'DECLINED_LEAVE_ABSENT',
           message: 'Your leave application letter for today was DECLINED by Admin and your attendance is marked as ABSENT.' 
         });
       }
-      return res.status(400).json({ message: 'You have already clocked in today.' });
+      return res.status(400).json({
+        success: false,
+        reason: 'ALREADY_CLOCKED_IN',
+        message: 'You have already clocked in today.'
+      });
     }
-
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
-    const userAgent = req.headers['user-agent'] || '';
-    const { browser, device } = parseUserAgent(userAgent);
-
-    let settings = await prisma.systemSettings.findUnique({
-      where: { id: 'GLOBAL' }
-    });
 
     // Check if user has an APPROVED leave/WFH request for today
     const approvedLeave = await prisma.leaveRequest.findFirst({
@@ -169,34 +120,55 @@ const clockIn = async (req, res) => {
       }
     });
 
-    const windowInfo = calculateClockInWindow(req.user.role, settings, now);
+    const validation = validateAttendanceWindow({
+      userRole: req.user.role,
+      settings,
+      attendanceRecord: existing,
+      approvedLeave,
+      now
+    });
 
-    let status = 'PRESENT';
-    let lateMinutes = null;
-
-    if (approvedLeave && approvedLeave.type === 'WFH') {
-      status = 'WORK_FROM_HOME';
-    } else {
-      // 1. Before early window -> Blocked
-      if (now < windowInfo.windowOpen) {
-        return res.status(400).json({
-          message: `Clock-in is available from ${windowInfo.windowOpenFormatted}.`
-        });
+    if (!validation.canClockIn) {
+      let msg = `Clock-in is prohibited at this time.`;
+      if (validation.reason === 'SHIFT_NOT_STARTED') {
+        msg = `Clock-in is available from ${validation.windowOpenFormatted}.`;
+      } else if (validation.reason === 'ALREADY_CLOCKED_IN') {
+        msg = `You have already clocked in today.`;
+      } else if (validation.reason === 'ALREADY_CLOCKED_OUT') {
+        msg = `You have already clocked out today.`;
       }
 
-      // 2. Early window + Shift Start + Grace Period -> PRESENT (On Time)
-      if (now <= windowInfo.windowClose) {
-        status = 'PRESENT';
-        lateMinutes = null;
-      } else {
-        // 3. After Grace Period -> LATE (lateMinutes = Now - Grace End Time)
-        status = 'LATE';
-        const diffMs = now.getTime() - windowInfo.windowClose.getTime();
-        lateMinutes = Math.floor(diffMs / (1000 * 60));
-      }
+      return res.status(400).json({
+        success: false,
+        reason: validation.reason || 'CLOCK_IN_PROHIBITED',
+        message: msg,
+        windowOpenFormatted: validation.windowOpenFormatted,
+        shiftStartFormatted: validation.shiftStartFormatted,
+        windowCloseFormatted: validation.windowCloseFormatted
+      });
     }
 
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || '';
+    const { browser, device } = parseUserAgent(userAgent);
     const { location } = req.body;
+
+    let finalStatus = 'PRESENT';
+    let lateMinutes = validation.lateMinutes;
+
+    if (approvedLeave && approvedLeave.type === 'WFH') {
+      finalStatus = 'WORK_FROM_HOME';
+      lateMinutes = null;
+    } else if (validation.state === 'OPEN_LATE') {
+      finalStatus = 'LATE';
+    } else {
+      finalStatus = 'PRESENT';
+      lateMinutes = null;
+    }
+
+    const shiftStartStr = (req.user.role === 'TEAM_LEADER' || req.user.role === 'ADMIN')
+      ? (settings?.tlShiftStart || '09:30')
+      : (settings?.internShiftStart || '09:30');
 
     const attendance = await prisma.attendance.create({
       data: {
@@ -206,35 +178,39 @@ const clockIn = async (req, res) => {
         ipAddress,
         browser,
         device,
-        status,
+        status: finalStatus,
         clockInLocation: location || null,
         lateMinutes,
-        earlyWindowUsed: windowInfo.earlyWindowMins,
-        gracePeriodUsed: windowInfo.gracePeriodMins,
-        shiftStartUsed: windowInfo.shiftStartStr
+        earlyWindowUsed: settings?.earlyWindowMinutes !== undefined ? settings.earlyWindowMinutes : 30,
+        gracePeriodUsed: settings?.gracePeriodMinutes !== undefined ? settings.gracePeriodMinutes : 15,
+        shiftStartUsed: shiftStartStr
       }
     });
 
     await logActivity({
       userId,
       action: 'CLOCK_IN',
-      details: `Clocked in today at ${now.toLocaleTimeString()}. Status: ${status}${lateMinutes ? ` (${lateMinutes} mins late)` : ''}`,
+      details: `Clocked in today at ${validation.currentTimeFormatted}. Status: ${finalStatus}${lateMinutes ? ` (${lateMinutes} mins late)` : ''}`,
       ipAddress
     });
 
-    if (status === 'LATE') {
+    if (finalStatus === 'LATE') {
       await createNotification({
         userId,
         title: 'Late Attendance Alert ⚠️',
-        message: `You clocked in at ${now.toLocaleTimeString()}, which is ${lateMinutes} minute(s) past the grace period end time (${windowInfo.windowCloseFormatted}). Your attendance for today is marked as LATE.`,
+        message: `You clocked in at ${validation.currentTimeFormatted}, which is ${lateMinutes} minute(s) past the grace period end time (${validation.windowCloseFormatted}). Your attendance for today is marked as LATE.`,
         type: 'ATTENDANCE_LATE'
       });
     }
 
+    // Broadcast real-time Socket.IO event
+    broadcastAttendanceEvent('attendance_clock_in', { userId, record: attendance });
+    broadcastAttendanceEvent('attendance_updated', { userId, record: attendance });
+
     res.status(201).json(attendance);
   } catch (error) {
     console.error('Clock in error:', error);
-    res.status(500).json({ message: 'Clock in failed.' });
+    res.status(500).json({ success: false, reason: 'SERVER_ERROR', message: 'Clock in failed.' });
   }
 };
 
@@ -242,33 +218,37 @@ const clockOut = async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
-    const localDateStr = now.toLocaleDateString('en-CA');
-    const todayDate = new Date(localDateStr + 'T00:00:00.000Z');
+
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+    const todayDate = getTodayZonedDate(now, timeZone);
 
     const attendance = await prisma.attendance.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: todayDate
-        }
-      }
+      where: { userId_date: { userId, date: todayDate } }
     });
 
     if (!attendance) {
-      return res.status(400).json({ message: 'You have not clocked in today yet.' });
+      return res.status(400).json({
+        success: false,
+        reason: 'NOT_CLOCKED_IN',
+        message: 'You have not clocked in today yet.'
+      });
     }
 
     if (attendance.clockOut) {
-      return res.status(400).json({ message: 'You have already clocked out today.' });
+      return res.status(400).json({
+        success: false,
+        reason: 'ALREADY_CLOCKED_OUT',
+        message: 'You have already clocked out today.'
+      });
     }
 
     // Calculate working decimal hours
-    const diffMs = now - new Date(attendance.clockIn);
-    const workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // decimal hours rounded to 2 places
+    const diffMs = now.getTime() - new Date(attendance.clockIn).getTime();
+    const workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
 
-    // Under 4 hours is considered Half Day
     let status = attendance.status;
-    if (workingHours < 4) {
+    if (workingHours < 4 && status !== 'WORK_FROM_HOME') {
       status = 'HALF_DAY';
     }
 
@@ -292,10 +272,14 @@ const clockOut = async (req, res) => {
       ipAddress: ip
     });
 
+    // Broadcast real-time Socket.IO event
+    broadcastAttendanceEvent('attendance_clock_out', { userId, record: updatedAttendance });
+    broadcastAttendanceEvent('attendance_updated', { userId, record: updatedAttendance });
+
     res.json(updatedAttendance);
   } catch (error) {
     console.error('Clock out error:', error);
-    res.status(500).json({ message: 'Clock out failed.' });
+    res.status(500).json({ success: false, reason: 'SERVER_ERROR', message: 'Clock out failed.' });
   }
 };
 
@@ -314,7 +298,6 @@ const getAttendanceLogs = async (req, res) => {
       where.userId = req.user.id;
     } else if (req.user.role === 'TEAM_LEADER') {
       if (userId) {
-        // Confirm user is in leader's team
         const member = await prisma.teamMember.findFirst({
           where: {
             userId,
@@ -326,7 +309,6 @@ const getAttendanceLogs = async (req, res) => {
         }
         where.userId = userId;
       } else {
-        // Get all members of leader's team
         const teamMembers = await prisma.teamMember.findMany({
           where: { team: { leaderId: req.user.id } }
         });
@@ -386,6 +368,9 @@ const updateAttendance = async (req, res) => {
       details: `Edited attendance for ${updated.user.name} on ${updated.date.toDateString()}`
     });
 
+    // Broadcast real-time Socket.IO event
+    broadcastAttendanceEvent('attendance_updated', { userId: updated.userId, record: updated });
+
     res.json(updated);
   } catch (error) {
     console.error('Update attendance error:', error);
@@ -396,8 +381,11 @@ const updateAttendance = async (req, res) => {
 const getAttendanceAnalytics = async (req, res) => {
   try {
     const now = new Date();
-    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-    const endOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+
+    const startOfToday = getTodayZonedDate(now, timeZone);
+    const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000 - 1);
 
     const totalMembersCount = await prisma.user.count({
       where: { role: { in: ['INTERN', 'EMPLOYEE'] }, status: 'ACTIVE' }

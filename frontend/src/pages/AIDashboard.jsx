@@ -62,7 +62,7 @@ const AIDashboard = () => {
   if (loading) {
     return (
       <div className="text-center py-20 text-muted-foreground text-sm font-bold animate-pulse">
-        Initializing MRF-AI Engine & Running Analytics...
+        Initializing Innoveity AI Engine & Running Analytics...
       </div>
     );
   }

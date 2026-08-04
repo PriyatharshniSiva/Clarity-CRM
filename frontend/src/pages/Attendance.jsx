@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../services/api';
+import api, { getSocket } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Clock,
@@ -112,7 +112,7 @@ const Attendance = () => {
     const durationPhrasing = isSingleDay ? `on ${startStr}` : `for the duration from ${startStr} to ${endStr}`;
 
     const defaultSubject = `Application for ${typeLabel} (${dateRangeStr})`;
-    const defaultLetter = `To,\nThe Management / Administrator,\nMRF Enterprise.\n\nRespected Sir/Madam,\n\nI am writing this formal application letter to request ${typeLabel} ${durationPhrasing}.\n\nReason for Request:\n[Please specify reason here]\n\n${leaveForm.type === 'WFH' ? 'During this work-from-home period, I will remain actively online, handle assigned tasks on time, and mark daily attendance via the portal.' : 'I will ensure all pending tasks are handed over to my team members before taking leave.'}\n\nEmergency Contact Number: ${leaveForm.contactPhone || user?.phone || '[Phone Number]'}\n\nThank you for your understanding and consideration.\n\nSincerely,\n${user?.name}\nEmployee ID: ${user?.employeeId || 'N/A'}\nRole: ${user?.role}`;
+    const defaultLetter = `To,\nThe Management / Administrator,\nInnoveity.\n\nRespected Sir/Madam,\n\nI am writing this formal application letter to request ${typeLabel} ${durationPhrasing}.\n\nReason for Request:\n[Please specify reason here]\n\n${leaveForm.type === 'WFH' ? 'During this work-from-home period, I will remain actively online, handle assigned tasks on time, and mark daily attendance via the portal.' : 'I will ensure all pending tasks are handed over to my team members before taking leave.'}\n\nEmergency Contact Number: ${leaveForm.contactPhone || user?.phone || '[Phone Number]'}\n\nThank you for your understanding and consideration.\n\nSincerely,\n${user?.name}\nEmployee ID: ${user?.employeeId || 'N/A'}\nRole: ${user?.role}`;
 
     setLeaveForm(prev => ({
       ...prev,
@@ -157,6 +157,22 @@ const Attendance = () => {
     fetchClockInStatus();
     fetchAttendanceStatus();
     fetchSettings();
+
+    const socket = getSocket();
+    if (socket) {
+      const handleAttendanceEvent = () => {
+        fetchClockInStatus();
+        fetchAttendanceStatus();
+      };
+      socket.on('attendance_clock_in', handleAttendanceEvent);
+      socket.on('attendance_clock_out', handleAttendanceEvent);
+      socket.on('attendance_updated', handleAttendanceEvent);
+      return () => {
+        socket.off('attendance_clock_in', handleAttendanceEvent);
+        socket.off('attendance_clock_out', handleAttendanceEvent);
+        socket.off('attendance_updated', handleAttendanceEvent);
+      };
+    }
   }, []);
 
   const fetchAttendanceStatus = async () => {
@@ -213,7 +229,7 @@ const Attendance = () => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
         headers: {
-          'User-Agent': 'MRF-Enterprise-CRM/1.0'
+          'User-Agent': 'Innoveity-CRM/1.0'
         }
       });
       if (response.ok) {
@@ -588,7 +604,7 @@ const Attendance = () => {
                 </div>
               )}
 
-              {clockInStatus.state === 'OPEN_ON_TIME' && new Date() > new Date(clockInStatus.shiftStartTime) && (
+              {clockInStatus.state === 'OPEN_ON_TIME' && (
                 <div className="p-4 rounded-2xl border border-primary/30 bg-primary/10 text-primary flex items-center justify-between text-xs font-semibold text-left mb-4 animate-in slide-in-from-top duration-300">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
@@ -675,7 +691,7 @@ const Attendance = () => {
               <div className="mt-8 flex gap-4 w-full max-w-sm">
                 <button
                   onClick={handleClockIn}
-                  disabled={loading || !!clockedRecord || clockInStatus?.state === 'BEFORE_WINDOW'}
+                  disabled={loading || !clockInStatus?.canClockIn}
                   className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-3 text-sm font-semibold hover:bg-primary-hover active:scale-95 disabled:opacity-40 shadow-lg shadow-primary/25 transition-all"
                 >
                   <Play className="h-4 w-4" />
@@ -684,7 +700,7 @@ const Attendance = () => {
 
                 <button
                   onClick={handleClockOut}
-                  disabled={loading || !clockedRecord || !!clockedRecord.clockOut}
+                  disabled={loading || !clockInStatus?.canClockOut}
                   className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white py-3 text-sm font-semibold active:scale-95 disabled:opacity-40 shadow-md shadow-rose-600/25 transition-all"
                 >
                   <Square className="h-4 w-4" />
@@ -697,7 +713,7 @@ const Attendance = () => {
                   <MapPin className="h-4.5 w-4.5 text-primary shrink-0 animate-bounce" />
                   <div className="text-left leading-snug">
                     <span className="font-bold text-foreground">Office Target Location:</span>
-                    <p className="mt-0.5 font-semibold text-indigo-500">{settings.officeLocationName || 'MRF Headquarters'}</p>
+                    <p className="mt-0.5 font-semibold text-indigo-500">{settings.officeLocationName || 'Innoveity Headquarters'}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">Lat: {settings.officeLatitude}, Lon: {settings.officeLongitude} (Radius: {settings.allowedRadiusMeters}m)</p>
                   </div>
                 </div>

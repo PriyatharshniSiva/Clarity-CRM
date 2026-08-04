@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/common/UserAvatar';
 import {
@@ -326,12 +327,36 @@ const Teams = () => {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">Assign Team Leader</label>
-                <select name="leaderId" value={formData.leaderId} onChange={handleInputChange}>
-                  <option value="">Select Team Leader</option>
-                  {availableLeaders.map(leader => (
-                    <option key={leader.id} value={leader.id}>{leader.name} ({leader.employeeId})</option>
-                  ))}
-                </select>
+                <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                  <select
+                    name="leaderId"
+                    value={formData.leaderId}
+                    onChange={handleInputChange}
+                    className="w-full bg-transparent px-3 py-2.5 text-xs font-medium focus:outline-none"
+                  >
+                    <option value="">— Select Team Leader —</option>
+                    {availableLeaders.map(leader => (
+                      <option key={leader.id} value={leader.id}>
+                        {leader.name} · {leader.employeeId}{leader.department ? ` · ${leader.department}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {availableLeaders.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-1 pl-1">No Team Leaders available. Add a Team Leader first.</p>
+                )}
+                {formData.leaderId && (() => {
+                  const sel = availableLeaders.find(l => l.id === formData.leaderId);
+                  return sel ? (
+                    <div className="flex items-center gap-2.5 mt-1 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+                      <UserAvatar user={sel} className="h-7 w-7 rounded-full shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">{sel.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{sel.employeeId}{sel.department ? ` · ${sel.department}` : ''}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50">
@@ -369,12 +394,36 @@ const Teams = () => {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">Assign Team Leader</label>
-                <select name="leaderId" value={formData.leaderId} onChange={handleInputChange}>
-                  <option value="">Select Team Leader</option>
-                  {availableLeaders.map(leader => (
-                    <option key={leader.id} value={leader.id}>{leader.name} ({leader.employeeId})</option>
-                  ))}
-                </select>
+                <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                  <select
+                    name="leaderId"
+                    value={formData.leaderId}
+                    onChange={handleInputChange}
+                    className="w-full bg-transparent px-3 py-2.5 text-xs font-medium focus:outline-none"
+                  >
+                    <option value="">— Select Team Leader —</option>
+                    {availableLeaders.map(leader => (
+                      <option key={leader.id} value={leader.id}>
+                        {leader.name} · {leader.employeeId}{leader.department ? ` · ${leader.department}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {availableLeaders.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-1 pl-1">No Team Leaders available. Add a Team Leader first.</p>
+                )}
+                {formData.leaderId && (() => {
+                  const sel = availableLeaders.find(l => l.id === formData.leaderId);
+                  return sel ? (
+                    <div className="flex items-center gap-2.5 mt-1 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+                      <UserAvatar user={sel} className="h-7 w-7 rounded-full shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">{sel.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{sel.employeeId}{sel.department ? ` · ${sel.department}` : ''}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary-hover active:scale-95 disabled:opacity-50">

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import api from '../../services/api';
+import api, { getSocket } from '../../services/api';
 import UserAvatar from '../common/UserAvatar';
 import {
   Clock,
@@ -127,6 +127,21 @@ export const EmployeeDashboard = () => {
 
   useEffect(() => {
     fetchEmployeeDashboardData();
+
+    const socket = getSocket();
+    if (socket) {
+      const handleAttendanceEvent = () => {
+        fetchEmployeeDashboardData();
+      };
+      socket.on('attendance_clock_in', handleAttendanceEvent);
+      socket.on('attendance_clock_out', handleAttendanceEvent);
+      socket.on('attendance_updated', handleAttendanceEvent);
+      return () => {
+        socket.off('attendance_clock_in', handleAttendanceEvent);
+        socket.off('attendance_clock_out', handleAttendanceEvent);
+        socket.off('attendance_updated', handleAttendanceEvent);
+      };
+    }
   }, [user]);
 
   const fetchEmployeeDashboardData = async () => {
@@ -548,7 +563,7 @@ export const EmployeeDashboard = () => {
             <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/40 w-full">
               <button
                 onClick={handleClockIn}
-                disabled={clockLoading || clockedRecord !== null}
+                disabled={clockLoading || !clockStatus?.canClockIn}
                 className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
@@ -556,7 +571,7 @@ export const EmployeeDashboard = () => {
               </button>
               <button
                 onClick={handleClockOut}
-                disabled={clockLoading || !clockedRecord || clockedRecord.clockOut !== null}
+                disabled={clockLoading || !clockStatus?.canClockOut}
                 className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
               >
                 <Square className="h-3 w-3 fill-current" />

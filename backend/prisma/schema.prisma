@@ -444,8 +444,8 @@ model ActivityLog {
 
 model SystemSettings {
   id               String   @id @default("GLOBAL")
-  companyName      String   @default("MRF Enterprise")
-  senderEmail      String   @default("no-reply@mrf-enterprise.com")
+  companyName      String   @default("Innoveity")
+  senderEmail      String   @default("no-reply@innoveity.com")
   internShiftStart String   @default("09:30") // Format HH:MM
   internShiftEnd   String   @default("18:30")
   tlShiftStart     String   @default("09:30")
@@ -453,7 +453,7 @@ model SystemSettings {
   officeLatitude   Float    @default(12.971598)
   officeLongitude  Float    @default(77.594562)
   allowedRadiusMeters Float  @default(200.0)
-  officeLocationName  String @default("MRF Headquarters")
+  officeLocationName  String @default("Innoveity Headquarters")
   earlyWindowMinutes Int    @default(30)
   gracePeriodMinutes Int    @default(15)
   updatedAt        DateTime @updatedAt
@@ -1027,7 +1027,7 @@ model PayrollSettings {
   minimumWorkingHours   Float    @default(4.0)
   roundingRule          String   @default("ROUND_HALF_UP")
   payslipTemplate       String   @default("STANDARD")
-  companyName           String   @default("MRF Innovation Park Enterprise")
+  companyName           String   @default("Innoveity")
   companyLogo           String?
   companyAddress        String   @default("100 Innovation Towers, Cyber City, Bangalore - 560001")
   authorizedSignature   String   @default("Authorized HR Signatory")

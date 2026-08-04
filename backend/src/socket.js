@@ -155,8 +155,16 @@ const getOnlineUsers = () => {
   return Array.from(onlineUsers.keys());
 };
 
-// Get IO instance
-const getIo = () => io;
+// Get the io instance
+const getIo = () => {
+  return io;
+};
+
+// Broadcast attendance real-time event
+const broadcastAttendanceEvent = (eventName, data) => {
+  if (!io) return;
+  io.emit(eventName, data);
+};
 
 module.exports = {
   init,
@@ -164,6 +172,7 @@ module.exports = {
   sendNotificationToUser,
   sendAnnouncement,
   getOnlineUsers,
-  disconnectUserSocket
+  disconnectUserSocket,
+  broadcastAttendanceEvent
 };
 
