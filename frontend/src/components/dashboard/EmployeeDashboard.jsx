@@ -797,7 +797,7 @@ export const EmployeeDashboard = () => {
             </div>
 
             {/* Task Cards List */}
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+            <div className="dash-scroll max-h-80 space-y-3">
               {myTasks.length === 0 ? (
                 <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/60">
                   No tasks assigned. You're all caught up!
@@ -915,6 +915,7 @@ export const EmployeeDashboard = () => {
               <span className="text-xs text-muted-foreground font-semibold">{time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
 
+            <div className="dash-scroll max-h-52">
             {todaySchedule.length === 0 ? (
               <p className="text-xs text-muted-foreground py-6 text-center font-medium">No schedule for today.</p>
             ) : (
@@ -930,6 +931,7 @@ export const EmployeeDashboard = () => {
                 ))}
               </div>
             )}
+            </div>
           </motion.div>
 
           {/* 5. Real Leave Balances & Apply Modal Trigger */}
@@ -992,7 +994,7 @@ export const EmployeeDashboard = () => {
                   </div>
                 )}
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="dash-scroll max-h-48 space-y-2">
                   {myTeam.members && myTeam.members.map((mem) => (
                     <div key={mem.id || mem.userId} className="flex items-center justify-between p-2 rounded-xl border border-border/40 bg-muted/20 text-xs">
                       <div className="flex items-center gap-2">
@@ -1014,7 +1016,7 @@ export const EmployeeDashboard = () => {
               <Megaphone className="h-5 w-5 text-primary" />
             </div>
 
-            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+            <div className="dash-scroll max-h-56 space-y-3">
               {announcements.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center font-medium">No announcements.</p>
               ) : (

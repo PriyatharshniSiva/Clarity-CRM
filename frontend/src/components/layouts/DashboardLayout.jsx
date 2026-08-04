@@ -38,11 +38,10 @@ import {
   Laptop,
   Pin,
   FolderOpen,
-  Sparkles,
-  Zap,
   Wrench,
   FileCode,
-  ListTree
+  ListTree,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -131,11 +130,6 @@ const DashboardLayout = ({ children }) => {
     updateThemeSettings({ themeMode: nextMode });
   };
 
-  const toggleCollapse = () => {
-    const nextVal = !isCollapsed;
-    setIsCollapsed(nextVal);
-    localStorage.setItem('sidebar_collapsed', String(nextVal));
-  };
 
   const [openCategories, setOpenCategories] = useState({
     Overview: true,
@@ -193,22 +187,7 @@ const DashboardLayout = ({ children }) => {
         { label: 'Announcements', path: '/announcements', icon: Megaphone, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
       ]
     },
-    {
-      title: 'AI Insights & Advisory',
-      items: [
-        { label: 'AI Executive Hub', path: '/ai-dashboard', icon: Sparkles, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'AI Action Center', path: '/ai-recommendations', icon: Zap, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'AI Workload Optimizer', path: '/ai-workload', icon: Users, roles: ['ADMIN', 'TEAM_LEADER'] }
-      ]
-    },
-    {
-      title: 'Analytics & Reports',
-      items: [
-        { label: 'Executive Analytics', path: '/analytics', icon: BarChart3, roles: ['ADMIN', 'TEAM_LEADER'] },
-        { label: 'Resource Utilization', path: '/resource-utilization', icon: Users, roles: ['ADMIN', 'TEAM_LEADER'] },
-        { label: 'Executive Reports', path: '/executive-reports', icon: FileText, roles: ['ADMIN', 'TEAM_LEADER'] }
-      ]
-    },
+
     {
       title: 'Operations',
       items: [

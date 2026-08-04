@@ -25,12 +25,7 @@ import SiteSettings from './pages/SiteSettings';
 import AssetManagement from './pages/AssetManagement';
 import Projects from './pages/Projects';
 import WorkLogs from './pages/WorkLogs';
-import AnalyticsDashboard from './pages/AnalyticsDashboard';
-import ResourceUtilization from './pages/ResourceUtilization';
-import ExecutiveReports from './pages/ExecutiveReports';
-import AIDashboard from './pages/AIDashboard';
-import AIRecommendations from './pages/AIRecommendations';
-import AIWorkload from './pages/AIWorkload';
+
 
 // Finance & Payroll Pages
 import PayrollDashboardPage from './pages/finance/PayrollDashboardPage';
@@ -337,54 +332,7 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
-                    <AnalyticsDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/resource-utilization"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
-                    <ResourceUtilization />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/executive-reports"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
-                    <ExecutiveReports />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/ai-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'EMPLOYEE', 'INTERN']}>
-                    <AIDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/ai-recommendations"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'EMPLOYEE', 'INTERN']}>
-                    <AIRecommendations />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/ai-workload"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
-                    <AIWorkload />
-                  </ProtectedRoute>
-                }
-              />
+
 
               {/* Finance & Payroll Module Routes */}
               <Route path="/payroll" element={<Navigate to="/payroll/dashboard" replace />} />

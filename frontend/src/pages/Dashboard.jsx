@@ -1061,7 +1061,7 @@ const Dashboard = () => {
                 </span>
               </div>
 
-              <div className="max-h-[220px] overflow-y-auto space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-emerald-500/30 scrollbar-track-transparent scroll-smooth snap-y snap-mandatory">
+              <div className="dash-scroll max-h-[220px] space-y-2.5 snap-y snap-mandatory">
                 {dayTasks.length > 0 ? (
                   [...dayTasks]
                     .sort((a, b) => {
@@ -1156,7 +1156,7 @@ const Dashboard = () => {
             <h3 className="text-sm font-bold text-foreground">Recent System Activities</h3>
             <Activity className="h-4 w-4 text-primary" />
           </div>
-          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+          <div className="dash-scroll max-h-72 space-y-3">
             {activities.length === 0 ? (
               <p className="text-xs text-muted-foreground py-4">No recent activity logs.</p>
             ) : (
@@ -1185,7 +1185,7 @@ const Dashboard = () => {
             <h3 className="text-sm font-bold text-foreground">Team Performance Rankings</h3>
             <Award className="h-4 w-4 text-primary" />
           </div>
-          <div className="space-y-4">
+          <div className="dash-scroll max-h-72 space-y-4 pr-0.5">
             {teamPerformances.length === 0 ? (
               <p className="text-xs text-muted-foreground py-4">No teams created yet.</p>
             ) : (

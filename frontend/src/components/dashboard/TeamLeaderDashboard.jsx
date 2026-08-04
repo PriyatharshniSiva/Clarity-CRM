@@ -600,7 +600,7 @@ export const TeamLeaderDashboard = () => {
       {/* 1. Header Banner — Matching Employee Dashboard Layout */}
       <motion.div
         variants={itemVariants}
-        className="rounded-[32px] border border-border/70 bg-gradient-to-r from-card via-card to-primary/10 p-6 sm:p-7 shadow-xs relative overflow-hidden"
+        className="rounded-[32px] border border-border/70 bg-white dark:bg-card p-6 sm:p-7 shadow-sm relative overflow-hidden"
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4 sm:gap-5">
@@ -626,13 +626,13 @@ export const TeamLeaderDashboard = () => {
             </div>
           </div>
 
-          {/* Live Clock & Shift Control */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-muted/30 border border-border/60 p-4 rounded-2xl shrink-0">
-            <div className="text-left sm:text-right">
+          {/* Live Clock & Shift Control — vertical centered layout */}
+          <div className="flex flex-col items-center gap-3 bg-muted/30 border border-border/60 p-5 rounded-2xl shrink-0 min-w-[170px]">
+            <div className="text-center">
               <span className="text-2xl font-black font-mono tracking-tight text-primary block">
                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
-              <span className="text-[11px] text-muted-foreground font-semibold block">
+              <span className="text-[11px] text-muted-foreground font-semibold block mt-0.5">
                 {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
               </span>
             </div>
@@ -641,7 +641,7 @@ export const TeamLeaderDashboard = () => {
               <button
                 onClick={handleClockIn}
                 disabled={clockLoading || !clockStatus?.canClockIn}
-                className="flex items-center gap-1.5 btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-1.5 btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
                 <span>Clock In</span>
@@ -649,7 +649,7 @@ export const TeamLeaderDashboard = () => {
               <button
                 onClick={handleClockOut}
                 disabled={clockLoading || !clockStatus?.canClockOut}
-                className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
                 <Square className="h-3.5 w-3.5 fill-current" />
                 <span>Clock Out</span>
@@ -924,13 +924,13 @@ export const TeamLeaderDashboard = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="dash-scroll max-h-[340px] space-y-3 pr-0.5">
               {filteredTaskList.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/60 font-semibold">
                   No tasks assigned under this filter.
                 </div>
               ) : (
-                filteredTaskList.slice(0, 6).map(task => (
+                filteredTaskList.map(task => (
                   <div
                     key={task.id}
                     className="p-4 rounded-2xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -1121,12 +1121,13 @@ export const TeamLeaderDashboard = () => {
                 Schedule for {selectedDate}
               </span>
 
+              <div className="dash-scroll max-h-48 space-y-2 mt-1">
               {selectedDateSchedule.length === 0 ? (
                 <p className="text-xs text-muted-foreground p-4 text-center bg-muted/20 rounded-xl font-semibold border border-dashed border-border/50">
                   No schedule for today.
                 </p>
               ) : (
-                selectedDateSchedule.slice(0, 5).map((item) => (
+                selectedDateSchedule.map((item) => (
                   <div
                     key={item.id}
                     className="p-2.5 rounded-xl border border-border/50 bg-muted/20 flex items-center justify-between text-xs"
@@ -1142,6 +1143,7 @@ export const TeamLeaderDashboard = () => {
                   </div>
                 ))
               )}
+              </div>
             </div>
           </div>
 
@@ -1160,13 +1162,13 @@ export const TeamLeaderDashboard = () => {
               </span>
             </div>
 
-            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            <div className="dash-scroll max-h-64 space-y-2.5">
               {enrichedTeamMembers.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border/50 font-semibold">
                   No team members assigned.
                 </p>
               ) : (
-                enrichedTeamMembers.slice(0, 8).map(member => (
+                enrichedTeamMembers.map(member => (
                   <div
                     key={member.id}
                     className="flex items-center justify-between p-2.5 rounded-xl border border-border/50 bg-muted/20 text-xs"
@@ -1213,13 +1215,13 @@ export const TeamLeaderDashboard = () => {
               </Link>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="dash-scroll max-h-52 space-y-2.5">
               {announcements.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border/50 font-semibold">
                   No announcements posted.
                 </p>
               ) : (
-                announcements.slice(0, 3).map(anc => (
+                announcements.map(anc => (
                   <div key={anc.id} className="p-3 rounded-2xl border border-border/50 bg-muted/20 space-y-1 text-xs">
                     <span className="font-bold text-foreground block">{anc.title}</span>
                     <p className="text-muted-foreground text-[11px] line-clamp-2">{anc.content}</p>

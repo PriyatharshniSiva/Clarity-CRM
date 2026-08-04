@@ -25,8 +25,7 @@ const projectRoutes = require('./routes/projectRoutes');
 const milestoneRoutes = require('./routes/milestoneRoutes');
 const taskDependencyRoutes = require('./routes/taskDependencyRoutes');
 const workLogRoutes = require('./routes/workLogRoutes');
-const analyticsRoutes = require('./routes/analyticsRoutes');
-const aiRoutes = require('./ai/aiRoutes');
+
 
 // Payroll Route modules
 const salaryTemplateRoutes = require('./routes/salaryTemplateRoutes');
@@ -170,8 +169,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api/task-dependencies', taskDependencyRoutes);
 app.use('/api/worklogs', workLogRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/ai', aiRoutes);
+
 
 // Finance & Payroll API Endpoints
 app.use('/api/payroll/templates', salaryTemplateRoutes);
