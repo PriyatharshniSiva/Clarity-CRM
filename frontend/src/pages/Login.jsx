@@ -20,8 +20,15 @@ const Login = () => {
   const [resetUserId, setResetUserId] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [tempPassAlert, setTempPassAlert] = useState('');
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const navigate = useNavigate();
+
+  const handleMouseMove = (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    setMousePos({ x, y });
+  };
 
   React.useEffect(() => {
     if (user) {
@@ -68,164 +75,70 @@ const Login = () => {
     }
   };
 
-  const displayName = companyName || 'INNOVEITY';
-  const logoSrc = companyLogo || '/v-logo.png';
+  const displayName = companyName || 'CLARITY INFOTECH';
+  const logoSrc = companyLogo || '/logo.png';
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6 font-sans theme-canvas-bg overflow-hidden transition-colors duration-300">
+    <div 
+      className="relative flex min-h-screen items-center justify-center p-4 sm:p-6 font-sans overflow-hidden transition-colors duration-300"
+      onMouseMove={handleMouseMove}
+      style={{
+        backgroundImage: "url('/sky-bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        animation: "bg-pan 45s linear infinite alternate"
+      }}
+    >
       
-      {/* Decorative ambient background glows (Driven by Theme Primary Color) */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute -top-40 -left-40 h-[650px] w-[650px] rounded-full blur-3xl opacity-20 transition-all duration-500" 
-          style={{ backgroundColor: 'rgb(var(--primary))' }} 
-        />
-        <div 
-          className="absolute -bottom-40 -right-40 h-[650px] w-[650px] rounded-full blur-3xl opacity-20 transition-all duration-500" 
-          style={{ backgroundColor: 'rgb(var(--primary))' }} 
-        />
-      </div>
-
       {/* Main 2-Column Enterprise Login Modal Container */}
-      <div className="relative z-10 w-full max-w-4xl rounded-[32px] bg-card text-card-foreground shadow-2xl shadow-black/10 border border-border/80 overflow-hidden flex flex-col lg:flex-row min-h-[580px] transition-all duration-300">
+      <div className="relative z-10 w-full max-w-5xl rounded-[32px] bg-white text-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] p-2 sm:p-4 flex flex-col lg:flex-row min-h-[640px] animate-fade-up-soft">
         
-        {/* LEFT COLUMN: Hero Branding Panel with 3D Clockwise Rolling Node Sphere & Centered Logo */}
-        <div className="w-full lg:w-1/2 bg-muted/40 border-b lg:border-b-0 lg:border-r border-border/60 p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
+        {/* LEFT COLUMN: Immersive Visual Panel */}
+        <div className="w-full lg:w-1/2 rounded-[24px] relative overflow-hidden flex flex-col justify-between p-8 sm:p-12 group">
           
-          {/* Dynamic Theme Gradient Background Accent */}
-          <div 
-            className="absolute inset-0 pointer-events-none transition-all duration-500 opacity-10" 
-            style={{ 
-              background: 'radial-gradient(circle at 30% 30%, rgb(var(--primary)), transparent 70%)' 
-            }} 
-          />
-
-          {/* Top Brand Tag */}
-          <div className="relative z-10 flex items-center gap-2">
-            <span 
-              className="h-2 w-2 rounded-full animate-pulse" 
-              style={{ backgroundColor: 'rgb(var(--primary))' }} 
+          {/* Animated Yeti Background Image */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <img 
+              src="/yeti.png" 
+              alt="Yeti Character" 
+              className="w-[110%] h-[110%] -left-[5%] -top-[5%] relative max-w-none object-cover transition-transform duration-300 ease-out animate-float"
+              style={{ 
+                transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px)`,
+                transformOrigin: 'center center'
+              }}
             />
-            <span className="text-[11px] font-extrabold tracking-widest text-muted-foreground uppercase">
-              {displayName}
-            </span>
+            {/* Subtle Gradient Overlay for Text Readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
           </div>
 
-          {/* CENTER: 3D Connected Node Sphere Animation (Rolling Clockwise with Dynamic Logo in Center) */}
-          <div className="relative z-10 my-6 flex items-center justify-center">
-            <div className="relative h-72 w-72 sm:h-80 sm:w-80 flex items-center justify-center">
-              
-              {/* Ambient backlight glow */}
-              <div 
-                className="absolute inset-4 rounded-full blur-2xl opacity-15 pointer-events-none transition-all duration-500" 
-                style={{ backgroundColor: 'rgb(var(--primary))' }} 
-              />
 
-              {/* 3D Rolling Clockwise Wireframe Sphere */}
-              <div className="absolute inset-0 animate-[spin_22s_linear_infinite]">
-                <svg viewBox="0 0 300 300" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="themeSphereGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="rgb(var(--primary))" stopOpacity="0.6" />
-                      <stop offset="100%" stopColor="rgb(var(--primary))" stopOpacity="0.1" />
-                    </linearGradient>
-                    <linearGradient id="themeSphereGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="rgb(var(--primary))" stopOpacity="0.4" />
-                      <stop offset="100%" stopColor="rgb(var(--primary))" stopOpacity="0.15" />
-                    </linearGradient>
-                  </defs>
 
-                  {/* Outer Boundary Circle */}
-                  <circle cx="150" cy="150" r="130" fill="none" stroke="rgb(var(--primary))" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.4" />
 
-                  {/* 3D Latitude Ellipses */}
-                  <ellipse cx="150" cy="150" rx="130" ry="45" fill="none" stroke="url(#themeSphereGrad1)" strokeWidth="1.2" transform="rotate(-15 150 150)" />
-                  <ellipse cx="150" cy="150" rx="130" ry="75" fill="none" stroke="url(#themeSphereGrad2)" strokeWidth="1.2" transform="rotate(25 150 150)" />
-                  <ellipse cx="150" cy="150" rx="130" ry="105" fill="none" stroke="url(#themeSphereGrad1)" strokeWidth="1" transform="rotate(-45 150 150)" />
-                  <ellipse cx="150" cy="150" rx="130" ry="50" fill="none" stroke="url(#themeSphereGrad2)" strokeWidth="1.2" transform="rotate(65 150 150)" />
-                  <ellipse cx="150" cy="150" rx="130" ry="120" fill="none" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.3" transform="rotate(105 150 150)" />
-
-                  {/* Intersecting Network Lines */}
-                  <line x1="60" y1="90" x2="150" y2="35" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="150" y1="35" x2="235" y2="85" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="235" y1="85" x2="255" y2="170" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="255" y1="170" x2="190" y2="245" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="190" y1="245" x2="105" y2="255" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="105" y1="255" x2="45" y2="185" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-                  <line x1="45" y1="185" x2="60" y2="90" stroke="rgb(var(--primary))" strokeWidth="0.8" opacity="0.4" />
-
-                  <line x1="95" y1="65" x2="205" y2="105" stroke="rgb(var(--primary))" strokeWidth="0.7" opacity="0.3" />
-                  <line x1="75" y1="135" x2="225" y2="195" stroke="rgb(var(--primary))" strokeWidth="0.7" opacity="0.3" />
-                  <line x1="125" y1="225" x2="175" y2="75" stroke="rgb(var(--primary))" strokeWidth="0.7" opacity="0.3" />
-
-                  {/* Network Node Dots (Driven by Theme Primary Color) */}
-                  <g>
-                    <circle cx="150" cy="35" r="4.5" fill="rgb(var(--primary))" />
-                    <circle cx="150" cy="35" r="8" fill="rgb(var(--primary))" opacity="0.25" />
-
-                    <circle cx="235" cy="85" r="4" fill="rgb(var(--primary))" />
-                    <circle cx="255" cy="170" r="4.5" fill="rgb(var(--primary))" />
-                    <circle cx="190" cy="245" r="4" fill="rgb(var(--primary))" opacity="0.8" />
-                    <circle cx="105" cy="255" r="4.5" fill="rgb(var(--primary))" />
-                    <circle cx="45" cy="185" r="4" fill="rgb(var(--primary))" />
-                    <circle cx="60" cy="90" r="4.5" fill="rgb(var(--primary))" />
-
-                    <circle cx="95" cy="65" r="3.5" fill="rgb(var(--primary))" opacity="0.8" />
-                    <circle cx="205" cy="105" r="3.5" fill="rgb(var(--primary))" />
-                    <circle cx="75" cy="135" r="3.5" fill="rgb(var(--primary))" />
-                    <circle cx="225" cy="195" r="3.5" fill="rgb(var(--primary))" />
-                    <circle cx="125" cy="225" r="3.5" fill="rgb(var(--primary))" opacity="0.8" />
-                    <circle cx="175" cy="75" r="3.5" fill="rgb(var(--primary))" />
-                  </g>
-                </svg>
-              </div>
-
-              {/* CENTER LOGO: Dynamic Transparent Company Logo */}
-              <div className="relative z-20 flex items-center justify-center transition-transform duration-300 hover:scale-105">
-                <img
-                  src={logoSrc}
-                  alt={displayName}
-                  className="h-24 sm:h-32 w-auto object-contain mix-blend-multiply drop-shadow-md"
-                  onError={(e) => {
-                    e.target.src = '/v-logo.png';
-                  }}
-                />
-              </div>
-
-            </div>
-          </div>
-
-          {/* Bottom Descriptor */}
-          <div className="relative z-10 space-y-1 text-center lg:text-left">
-            <h3 className="text-lg font-black text-primary tracking-tight">
-              Enterprise CRM Workspace
-            </h3>
-            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-              Streamlining team workflows, dynamic builders, and real-time operations.
-            </p>
-          </div>
 
         </div>
 
-        {/* RIGHT COLUMN: Interactive Login Form Panel (Equal Top & Bottom Spacing) */}
-        <div className="w-full lg:w-1/2 p-8 sm:p-12 flex flex-col justify-center my-auto text-left">
+        {/* RIGHT COLUMN: Clean Form Panel */}
+        <div className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center my-auto text-left">
           
-          <div className="my-auto w-full">
-            {/* Title Header (Center Aligned) */}
-            <div className="mb-6 space-y-1 text-center">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-primary text-center">
-                {forgotMode ? 'Reset Password' : displayName}
+          <div className="my-auto w-full max-w-sm mx-auto">
+            {/* Title Header */}
+            <div className="mb-8 space-y-2 text-center  animate-stagger-fade" style={{ animationDelay: '200ms' }}>
+              <div className="flex justify-center mb-4">
+                <img src={logoSrc} alt="Logo" className="h-8 w-auto mix-blend-multiply opacity-80" onError={(e) => e.target.style.display='none'} />
+              </div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                {forgotMode ? 'Reset Password' : 'WELCOME BACK'}
               </h2>
-              <p className="text-xs font-semibold text-muted-foreground text-center">
+              <p className="text-xs font-semibold text-slate-500">
                 {forgotMode
-                  ? 'Enter your User ID to reset your password to your Date of Birth.'
-                  : 'Enter your enterprise credentials to access your portal.'}
+                  ? 'Enter your User ID to reset your password.'
+                  : 'Enter your email and password to access your account'}
               </p>
             </div>
 
             {/* Error Alert */}
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl bg-danger/10 border border-danger/20 p-3.5 text-xs text-danger font-semibold">
+              <div className="mb-6 flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-600 font-medium  animate-stagger-fade" style={{ animationDelay: '250ms' }}>
                 <span className="shrink-0 mt-0.5">⚠️</span>
                 <span>{error}</span>
               </div>
@@ -233,40 +146,39 @@ const Login = () => {
 
             {/* Reset Success Alert */}
             {resetSuccess && (
-              <div className="mb-4 rounded-2xl bg-success/10 border border-success/20 p-3.5 text-xs text-success font-semibold">
+              <div className="mb-6 rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-xs text-emerald-600 font-medium  animate-stagger-fade" style={{ animationDelay: '250ms' }}>
                 <p>{resetSuccess}</p>
                 {tempPassAlert && (
-                  <p className="mt-1.5 font-mono text-success bg-success/10 rounded-lg px-2 py-1">{tempPassAlert}</p>
+                  <p className="mt-1.5 font-mono bg-emerald-100/50 rounded-lg px-2 py-1">{tempPassAlert}</p>
                 )}
               </div>
             )}
 
             {/* LOGIN FORM */}
             {!forgotMode ? (
-              <form className="space-y-4" onSubmit={handleLoginSubmit}>
-                {/* User ID */}
-                <div className="space-y-1">
-                  <div className="relative group">
-                    <User className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="Enter Mail"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-4 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
-                      autoComplete="username"
-                    />
-                  </div>
+              <form className="space-y-5" onSubmit={handleLoginSubmit}>
+                
+                {/* User ID / Email */}
+                <div className="space-y-1.5  animate-stagger-fade" style={{ animationDelay: '300ms' }}>
+                  <label className="text-xs font-semibold text-slate-600 ml-1">Email</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your email"
+                    className="w-full rounded-xl border border-transparent bg-slate-50/80 py-3.5 px-4 text-sm text-slate-900 font-medium hover:border-slate-200 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 placeholder:text-slate-400 transition-all outline-none"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    autoComplete="username"
+                  />
                 </div>
 
                 {/* Password */}
-                <div className="space-y-1">
+                <div className="space-y-1.5  animate-stagger-fade" style={{ animationDelay: '400ms' }}>
+                  <label className="text-xs font-semibold text-slate-600 ml-1">Password</label>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter Password"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-11 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
+                      placeholder="Enter your password"
+                      className="w-full rounded-xl border border-transparent bg-slate-50/80 py-3.5 px-4 pr-11 text-sm text-slate-900 font-medium hover:border-slate-200 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 placeholder:text-slate-400 transition-all outline-none"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -275,7 +187,7 @@ const Login = () => {
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
                       tabIndex={-1}
-                      className="absolute right-4 top-4 text-muted-foreground hover:text-primary transition-colors focus:outline-none cursor-pointer"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -283,8 +195,8 @@ const Login = () => {
                 </div>
 
                 {/* Remember Me & Forgot Password Row */}
-                <div className="flex items-center justify-between text-xs font-semibold pt-1">
-                  <label className="flex items-center gap-2 text-muted-foreground cursor-pointer select-none">
+                <div className="flex items-center justify-between text-xs font-semibold pt-1  animate-stagger-fade" style={{ animationDelay: '500ms' }}>
+                  <label className="flex items-center gap-2 text-slate-500 cursor-pointer select-none hover:text-slate-700 transition-colors">
                     <input
                       type="checkbox"
                       checked={rememberMe}
@@ -292,58 +204,50 @@ const Login = () => {
                       className="hidden"
                     />
                     {rememberMe ? (
-                      <CheckSquare className="h-4 w-4 text-primary" />
+                      <CheckSquare className="h-4 w-4 text-blue-500" />
                     ) : (
-                      <Square className="h-4 w-4 text-muted-foreground/40" />
+                      <Square className="h-4 w-4 text-slate-300" />
                     )}
                     <span>Remember me</span>
                   </label>
 
-                  <button
-                    type="button"
-                    onClick={() => { setForgotMode(true); setError(''); }}
-                    className="text-primary hover:text-primary-hover font-bold hover:underline transition-colors cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
+                  {/* Removed Forgot Password */}
                 </div>
 
-                {/* Main Submit Button (Dynamic Theme Gradient) */}
+                {/* Main Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground py-3.5 text-sm font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-black hover:bg-slate-800 text-white py-3.5 text-sm font-semibold transition-all hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 cursor-pointer  animate-stagger-fade"
+                  style={{ animationDelay: '600ms' }}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <>
-                      <span>Log In to Account</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
+                    <span>Sign In</span>
                   )}
                 </button>
+                
               </form>
             ) : (
               /* RESET PASSWORD FORM */
-              <form className="space-y-4" onSubmit={handleResetSubmit}>
-                <div className="space-y-1">
-                  <div className="relative group">
-                    <User className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="Enter User ID (e.g. EM-1004)"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-4 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
-                      value={resetUserId}
-                      onChange={(e) => setResetUserId(e.target.value)}
-                    />
-                  </div>
+              <form className="space-y-5" onSubmit={handleResetSubmit}>
+                <div className="space-y-1.5  animate-stagger-fade" style={{ animationDelay: '300ms' }}>
+                  <label className="text-xs font-semibold text-slate-600 ml-1">Email / User ID</label>
+                  <input
+                    type="text"
+                    placeholder="Enter User ID (e.g. EM-1004)"
+                    className="w-full rounded-xl border border-transparent bg-slate-50/80 py-3.5 px-4 text-sm text-slate-900 font-medium hover:border-slate-200 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 placeholder:text-slate-400 transition-all outline-none"
+                    value={resetUserId}
+                    onChange={(e) => setResetUserId(e.target.value)}
+                  />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground py-3.5 text-sm font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-black hover:bg-slate-800 text-white py-3.5 text-sm font-semibold transition-all hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 cursor-pointer  animate-stagger-fade"
+                  style={{ animationDelay: '400ms' }}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -358,9 +262,10 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => { setForgotMode(false); setError(''); setResetSuccess(''); }}
-                  className="w-full text-center text-xs text-muted-foreground hover:text-primary font-semibold transition-colors py-1 cursor-pointer"
+                  className="w-full text-center text-xs text-slate-500 hover:text-slate-800 font-semibold transition-colors py-2 cursor-pointer  animate-stagger-fade"
+                  style={{ animationDelay: '500ms' }}
                 >
-                  ← Back to Sign In
+                  Back to Sign In
                 </button>
               </form>
             )}
