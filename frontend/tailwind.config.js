@@ -53,31 +53,6 @@ export default {
         jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
         inter: ['Inter', 'sans-serif'],
       },
-      keyframes: {
-        'bg-pan': {
-          '0%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' },
-        },
-        'fade-up-soft': {
-          '0%': { opacity: '0', transform: 'translateY(15px) scale(0.99)' },
-          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
-        },
-        'float': {
-          '0%, 100%': { transform: 'translateY(0) scale(1)' },
-          '50%': { transform: 'translateY(-10px) scale(1.02)' },
-        },
-        'stagger-fade': {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        }
-      },
-      animation: {
-        'bg-pan': 'bg-pan 25s ease-in-out infinite',
-        'fade-up-soft': 'fade-up-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'float': 'float 6s ease-in-out infinite',
-        'stagger-fade': 'stagger-fade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-      },
     },
   },
   plugins: [],

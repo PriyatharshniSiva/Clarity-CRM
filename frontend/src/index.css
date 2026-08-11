@@ -13,8 +13,8 @@
     --popover: 255, 255, 255;
     --border: 226, 234, 230;
     
-    --primary: 5, 122, 85;
-    --primary-hover: 4, 106, 74;
+    --primary: 56, 189, 248;
+    --primary-hover: 37, 99, 235;
     --primary-foreground: 255, 255, 255;
     
     --secondary: 16, 185, 129;
@@ -29,7 +29,7 @@
   }
 
   .dark {
-    --background: 13, 19, 16;
+    --background: 10, 14, 57;
     --foreground: 241, 245, 249;
     
     --card: 20, 29, 25;
@@ -38,8 +38,8 @@
     --popover: 20, 29, 25;
     --border: 35, 48, 42;
     
-    --primary: 16, 185, 129;
-    --primary-hover: 52, 211, 153;
+    --primary: 56, 189, 248;
+    --primary-hover: 37, 99, 235;
     --primary-foreground: 13, 19, 16;
     
     --secondary: 20, 184, 166;
@@ -56,20 +56,20 @@
   /* Predefined Theme Presets with High Specificity */
   html[data-theme="emerald"],
   :root[data-theme="emerald"] {
-    --primary: 5, 122, 85 !important;
-    --primary-hover: 4, 106, 74 !important;
-    --primary-light: 236, 253, 245 !important;
-    --primary-dark: 4, 78, 56 !important;
-    --secondary: 16, 185, 129 !important;
-    --accent: 5, 150, 105 !important;
-    --app-background-from: 236, 253, 245 !important;
-    --app-background-via: 240, 253, 248 !important;
-    --app-background-to: 220, 252, 231 !important;
-    --button-gradient-start: 4, 120, 87 !important;
-    --button-gradient-end: 16, 185, 129 !important;
-    --button-gradient-hover-start: 4, 95, 69 !important;
-    --button-gradient-hover-end: 5, 150, 105 !important;
-    --login-start: 6, 78, 59 !important;
+    --primary: 37, 99, 235 !important;
+    --primary-hover: 29, 78, 216 !important;
+    --primary-light: 239, 246, 255 !important;
+    --primary-dark: 10, 14, 57 !important;
+    --secondary: 56, 189, 248 !important;
+    --accent: 14, 165, 233 !important;
+    --app-background-from: 248, 250, 252 !important;
+    --app-background-via: 241, 245, 249 !important;
+    --app-background-to: 248, 250, 252 !important;
+    --button-gradient-start: 37, 99, 235 !important;
+    --button-gradient-end: 29, 78, 216 !important;
+    --button-gradient-hover-start: 29, 78, 216 !important;
+    --button-gradient-hover-end: 30, 64, 175 !important;
+    --login-start: 10, 14, 57 !important;
     --login-end: 15, 23, 42 !important;
   }
   html[data-theme="blue"],

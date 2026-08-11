@@ -15,15 +15,11 @@ const login = async (req, res) => {
     const cleanInput = String(loginInput).trim();
     const noSpaceInput = cleanInput.replace(/\s+/g, '');
 
-    // Search user by email, employeeId, name, or id (case-insensitive & space-flexible)
     let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: { equals: cleanInput, mode: 'insensitive' } },
-          { employeeId: { equals: cleanInput, mode: 'insensitive' } },
-          { name: { equals: cleanInput, mode: 'insensitive' } },
-          { name: { contains: cleanInput, mode: 'insensitive' } },
-          { id: { equals: cleanInput } }
+          { email: cleanInput },
+          { employeeId: cleanInput }
         ]
       },
       include: {
@@ -33,29 +29,11 @@ const login = async (req, res) => {
       }
     });
 
-    if (!user && noSpaceInput) {
-      const allUsers = await prisma.user.findMany({
-        include: { teamMembers: { include: { team: true } } }
-      });
-      user = allUsers.find(u =>
-        u.email.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase() ||
-        u.employeeId.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase() ||
-        u.name.toLowerCase().replace(/\s+/g, '') === noSpaceInput.toLowerCase()
-      );
-    }
-
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    if (user.status !== 'ACTIVE') {
-      return res.status(403).json({ message: 'Your account is disabled.' });
-    }
-
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
-    }
 
     // Check if user is logging in using their temporary password (DOB without slashes)
     let isTempPassword = false;
@@ -65,6 +43,10 @@ const login = async (req, res) => {
       const parts = dobFormatted.split('-');
       const dobTemp = `${parts[2]}${parts[1]}${parts[0]}`;
       isTempPassword = (password === dobTemp);
+    }
+
+    if (!isMatch && !isTempPassword) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     const token = jwt.sign(
@@ -246,8 +228,8 @@ const resetPasswordRequest = async (req, res) => {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { employeeId: { equals: resetInput.trim(), mode: 'insensitive' } },
-          { email: { equals: resetInput.trim(), mode: 'insensitive' } }
+          { employeeId: { equals: resetInput.trim() } },
+          { email: { equals: resetInput.trim() } }
         ]
       }
     });

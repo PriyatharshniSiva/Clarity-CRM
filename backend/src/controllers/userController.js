@@ -198,13 +198,13 @@ const getAllUsers = async (req, res) => {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { employeeId: { contains: search, mode: 'insensitive' } },
-        { department: { contains: search, mode: 'insensitive' } },
-        { college: { contains: search, mode: 'insensitive' } },
-        { companyName: { contains: search, mode: 'insensitive' } },
-        { candidateType: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { employeeId: { contains: search } },
+        { department: { contains: search } },
+        { college: { contains: search } },
+        { companyName: { contains: search } },
+        { candidateType: { contains: search } }
       ];
     }
 

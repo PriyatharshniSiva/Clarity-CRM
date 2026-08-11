@@ -309,7 +309,7 @@ const CandidateTypeFields = ({
                     value={formData.companyName || formData.college || ''}
                     onChange={onChange}
                     required
-                    placeholder="e.g. Acme Innovations Corp"
+                    placeholder="e.g. Acme Clarity Corp"
                     className={inputClass}
                   />
                 </div>

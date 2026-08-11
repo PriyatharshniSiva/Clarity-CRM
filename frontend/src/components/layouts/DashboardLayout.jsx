@@ -41,7 +41,8 @@ import {
   Wrench,
   FileCode,
   ListTree,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -165,14 +166,14 @@ const DashboardLayout = ({ children }) => {
     {
       title: 'Overview',
       items: [
-        { label: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'My Profile', path: '/profile', icon: UserIcon, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
+        { label: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'INTERN'] },
+        { label: 'My Profile', path: '/profile', icon: UserIcon, roles: ['ADMIN', 'EMPLOYEE', 'INTERN'] }
       ]
     },
     {
       title: 'Workspaces',
       items: [
-        { label: 'Projects', path: '/projects', icon: FolderOpen, roles: ['ADMIN', 'TEAM_LEADER'] },
+        { label: 'Projects', path: '/projects', icon: FolderOpen, roles: ['TEAM_LEADER', 'ADMIN'] },
         { label: 'Active Board', path: '/tasks?tab=Board', icon: Layers, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Backlog', path: '/tasks?tab=Backlog', icon: FileText, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Roadmap', path: '/tasks?tab=Timeline', icon: Calendar, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
@@ -187,13 +188,12 @@ const DashboardLayout = ({ children }) => {
         { label: 'Announcements', path: '/announcements', icon: Megaphone, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
       ]
     },
-
     {
       title: 'Operations',
       items: [
         { label: 'My Work Logs', path: '/worklogs', icon: Clock, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'Attendance Portal', path: '/attendance', icon: Clock, roles: ['INTERN', 'TEAM_LEADER', 'EMPLOYEE'] },
-        { label: 'Attendance Audit', path: '/attendance-audit', icon: Clock, roles: ['ADMIN', 'TEAM_LEADER'] },
+        { label: 'Attendance Portal', path: '/attendance', icon: Clock, roles: ['EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
+        { label: 'Attendance Audit', path: '/attendance-audit', icon: Clock, roles: ['TEAM_LEADER', 'ADMIN'] },
         { label: 'Leave Management', path: '/leave-management', icon: Calendar, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN', 'SUPER_ADMIN'] },
         { label: 'Ticket Desk', path: '/tickets', icon: Ticket, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Asset Management', path: '/assets', icon: Laptop, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
@@ -202,6 +202,7 @@ const DashboardLayout = ({ children }) => {
     {
       title: 'Finance & Payroll',
       items: [
+        { label: 'My Payslips & Salary', path: '/my-payroll', icon: FileText, roles: ['EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Payroll Dashboard', path: '/payroll/dashboard', icon: BarChart3, roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Salary Templates', path: '/payroll/templates', icon: FileText, roles: ['ADMIN'] },
         { label: 'Salary Structures', path: '/payroll/structures', icon: Users, roles: ['ADMIN'] },
@@ -209,8 +210,7 @@ const DashboardLayout = ({ children }) => {
         { label: 'Payslips Desk', path: '/payroll/payslips', icon: FileCode, roles: ['ADMIN'] },
         { label: 'Holiday Calendar', path: '/payroll/holidays', icon: Calendar, roles: ['ADMIN'] },
         { label: 'Payroll Reports', path: '/payroll/reports', icon: BarChart3, roles: ['ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Payroll Settings', path: '/payroll/settings', icon: Settings, roles: ['ADMIN'] },
-        { label: 'My Payslips & Salary', path: '/my-payroll', icon: FileText, roles: ['EMPLOYEE', 'INTERN', 'TEAM_LEADER'] }
+        { label: 'Payroll Settings', path: '/payroll/settings', icon: Settings, roles: ['ADMIN'] }
       ]
     },
     {
@@ -220,7 +220,7 @@ const DashboardLayout = ({ children }) => {
         { label: 'Employee Registry', path: '/employees', icon: Users, roles: ['ADMIN'] },
         { label: 'Team Leader Registry', path: '/team-leaders', icon: Users, roles: ['ADMIN'] },
         { label: 'Team Hub', path: '/teams', icon: Briefcase, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'Report Center', path: '/reports', icon: BarChart3, roles: ['ADMIN', 'TEAM_LEADER'] },
+        { label: 'Report Center', path: '/reports', icon: BarChart3, roles: ['TEAM_LEADER', 'ADMIN'] },
         { label: 'Audit Logs', path: '/audit-logs', icon: History, roles: ['ADMIN'] },
         { label: 'Site Settings', path: '/settings', icon: ShieldCheck, roles: ['ADMIN'] }
       ]
@@ -430,7 +430,7 @@ const DashboardLayout = ({ children }) => {
                     className="h-9 max-w-[170px] object-contain shrink-0"
                   />
                 ) : (
-                  <img src="/logo.png" alt={companyName || 'INNOVEITY'} className="h-9 max-w-[170px] object-contain shrink-0" />
+                  <img src="/logo.png" alt={companyName || 'CLARITY INFOTECH'} className="h-9 max-w-[170px] object-contain shrink-0" />
                 )}
               </Link>
 

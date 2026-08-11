@@ -1139,7 +1139,7 @@ const Tasks = () => {
 
   const renderDocsTab = () => {
     const documents = [
-      { title: 'Innoveity Intern Onboarding Guide', desc: 'Step-by-step checklist for system configurations and access setup.', author: 'Admin', date: 'Jul 15, 2026' },
+      { title: 'Clarity InfoTech Intern Onboarding Guide', desc: 'Step-by-step checklist for system configurations and access setup.', author: 'Admin', date: 'Jul 15, 2026' },
       { title: 'Frontend Coding Style & UI Standards', desc: 'Rules for tailwind configs, custom CSS classes, and Lucide icons.', author: 'Suraj Somu', date: 'Jul 12, 2026' },
       { title: 'API Endpoints & Database Schemas Guide', desc: 'Documentation of attendance and team route endpoints parameters.', author: 'Suraj Somu', date: 'Jul 10, 2026' }
     ];

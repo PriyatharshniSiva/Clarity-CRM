@@ -1,0 +1,10 @@
+PORT=5000
+DATABASE_URL="postgresql://postgres:123@localhost:5432/mrf_crm?schema=public"
+JWT_SECRET="enterprise_internship_crm_super_secret_jwt_key_123!"
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="loqanto@gmail.com"
+SMTP_PASS="jjfu hoog xfhu dfbz"
+FRONTEND_URL="http://localhost:5173"
+COMPANY_NAME="Innoveity"
+SENDER_EMAIL="loqanto@gmail.com"

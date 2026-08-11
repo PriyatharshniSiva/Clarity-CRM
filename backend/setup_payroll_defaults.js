@@ -20,7 +20,7 @@ async function seedPayrollDefaults() {
       minimumWorkingHours: 4.0,
       roundingRule: 'ROUND_HALF_UP',
       payslipTemplate: 'STANDARD',
-      companyName: 'Innoveity',
+      companyName: 'Clarity InfoTech',
       companyAddress: '100 Innovation Towers, Cyber City, Bangalore - 560001',
       authorizedSignature: 'Authorized HR Signatory'
     },
@@ -38,7 +38,7 @@ async function seedPayrollDefaults() {
       minimumWorkingHours: 4.0,
       roundingRule: 'ROUND_HALF_UP',
       payslipTemplate: 'STANDARD',
-      companyName: 'Innoveity',
+      companyName: 'Clarity InfoTech',
       companyAddress: '100 Innovation Towers, Cyber City, Bangalore - 560001',
       authorizedSignature: 'Authorized HR Signatory'
     }

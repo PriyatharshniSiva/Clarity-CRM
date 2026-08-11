@@ -17,15 +17,15 @@ async function main() {
       let newEmail = sys.senderEmail;
 
       if (sys.companyName && (sys.companyName.includes('MRF') || sys.companyName.includes('MCC'))) {
-        newName = 'Innoveity';
+        newName = 'Clarity InfoTech';
         needsUpdate = true;
       }
       if (sys.officeLocationName && sys.officeLocationName.includes('MRF')) {
-        newLocation = sys.officeLocationName.replace(/MRF/g, 'Innoveity');
+        newLocation = sys.officeLocationName.replace(/MRF/g, 'Clarity InfoTech');
         needsUpdate = true;
       }
       if (sys.senderEmail && sys.senderEmail.includes('mrf-enterprise')) {
-        newEmail = sys.senderEmail.replace(/mrf-enterprise/g, 'innoveity');
+        newEmail = sys.senderEmail.replace(/mrf-enterprise/g, 'clarity-infotech');
         needsUpdate = true;
       }
 
@@ -51,12 +51,12 @@ async function main() {
     console.log('Current PlatformSettings count:', platformSettings.length);
     for (const plat of platformSettings) {
       console.log('PlatformSettings record:', { id: plat.id, companyName: plat.companyName });
-      if (plat.companyName && (plat.companyName.includes('MRF') || plat.companyName.includes('MCC') || plat.companyName.includes('Innoviety'))) {
+      if (plat.companyName && (plat.companyName.includes('MRF') || plat.companyName.includes('MCC') || plat.companyName.includes('Clarity'))) {
         await prisma.platformSettings.update({
           where: { id: plat.id },
-          data: { companyName: 'Innoveity' }
+          data: { companyName: 'Clarity InfoTech' }
         });
-        console.log(`Updated PlatformSettings ${plat.id}: companyName -> Innoveity`);
+        console.log(`Updated PlatformSettings ${plat.id}: companyName -> Clarity InfoTech`);
       }
     }
   } catch (err) {
@@ -72,9 +72,9 @@ async function main() {
       if (pay.companyName && (pay.companyName.includes('MRF') || pay.companyName.includes('MCC'))) {
         await prisma.payrollSettings.update({
           where: { id: pay.id },
-          data: { companyName: 'Innoveity' }
+          data: { companyName: 'Clarity InfoTech' }
         });
-        console.log(`Updated PayrollSettings ${pay.id}: companyName -> Innoveity`);
+        console.log(`Updated PayrollSettings ${pay.id}: companyName -> Clarity InfoTech`);
       }
     }
   } catch (err) {
@@ -95,9 +95,9 @@ async function main() {
     for (const u of usersWithMrf) {
       await prisma.user.update({
         where: { id: u.id },
-        data: { companyName: 'Innoveity' }
+        data: { companyName: 'Clarity InfoTech' }
       });
-      console.log(`Updated user ${u.email} companyName -> Innoveity`);
+      console.log(`Updated user ${u.email} companyName -> Clarity InfoTech`);
     }
   } catch (err) {
     console.error('Error inspecting User companyName:', err.message);

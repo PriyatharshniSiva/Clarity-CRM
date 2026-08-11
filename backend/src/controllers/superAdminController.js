@@ -64,7 +64,7 @@ const getOrCreatePlatformSettings = async () => {
     settings = await prisma.platformSettings.create({
       data: {
         id: 'PLATFORM',
-        companyName: 'Innoviety Enterprise',
+        companyName: 'Clarity Enterprise',
         selectedTheme: 'emerald',
         themeMode: 'light'
       }
@@ -139,9 +139,9 @@ const getUsersDirectory = async (req, res) => {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { employeeId: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { employeeId: { contains: search } }
       ];
     }
 
@@ -363,9 +363,9 @@ const getTeamsDirectory = async (req, res) => {
     const where = {};
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { code: { contains: search, mode: 'insensitive' } },
-        { department: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { code: { contains: search } },
+        { department: { contains: search } }
       ];
     }
 

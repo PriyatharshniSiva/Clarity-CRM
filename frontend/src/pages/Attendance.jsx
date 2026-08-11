@@ -112,7 +112,7 @@ const Attendance = () => {
     const durationPhrasing = isSingleDay ? `on ${startStr}` : `for the duration from ${startStr} to ${endStr}`;
 
     const defaultSubject = `Application for ${typeLabel} (${dateRangeStr})`;
-    const defaultLetter = `To,\nThe Management / Administrator,\nInnoveity.\n\nRespected Sir/Madam,\n\nI am writing this formal application letter to request ${typeLabel} ${durationPhrasing}.\n\nReason for Request:\n[Please specify reason here]\n\n${leaveForm.type === 'WFH' ? 'During this work-from-home period, I will remain actively online, handle assigned tasks on time, and mark daily attendance via the portal.' : 'I will ensure all pending tasks are handed over to my team members before taking leave.'}\n\nEmergency Contact Number: ${leaveForm.contactPhone || user?.phone || '[Phone Number]'}\n\nThank you for your understanding and consideration.\n\nSincerely,\n${user?.name}\nEmployee ID: ${user?.employeeId || 'N/A'}\nRole: ${user?.role}`;
+    const defaultLetter = `To,\nThe Management / Administrator,\nClarity InfoTech.\n\nRespected Sir/Madam,\n\nI am writing this formal application letter to request ${typeLabel} ${durationPhrasing}.\n\nReason for Request:\n[Please specify reason here]\n\n${leaveForm.type === 'WFH' ? 'During this work-from-home period, I will remain actively online, handle assigned tasks on time, and mark daily attendance via the portal.' : 'I will ensure all pending tasks are handed over to my team members before taking leave.'}\n\nEmergency Contact Number: ${leaveForm.contactPhone || user?.phone || '[Phone Number]'}\n\nThank you for your understanding and consideration.\n\nSincerely,\n${user?.name}\nEmployee ID: ${user?.employeeId || 'N/A'}\nRole: ${user?.role}`;
 
     setLeaveForm(prev => ({
       ...prev,
@@ -229,7 +229,7 @@ const Attendance = () => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
         headers: {
-          'User-Agent': 'Innoveity-CRM/1.0'
+          'User-Agent': 'Clarity InfoTech-CRM/1.0'
         }
       });
       if (response.ok) {
@@ -713,7 +713,7 @@ const Attendance = () => {
                   <MapPin className="h-4.5 w-4.5 text-primary shrink-0 animate-bounce" />
                   <div className="text-left leading-snug">
                     <span className="font-bold text-foreground">Office Target Location:</span>
-                    <p className="mt-0.5 font-semibold text-indigo-500">{settings.officeLocationName || 'Innoveity Headquarters'}</p>
+                    <p className="mt-0.5 font-semibold text-indigo-500">{settings.officeLocationName || 'Clarity InfoTech Headquarters'}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">Lat: {settings.officeLatitude}, Lon: {settings.officeLongitude} (Radius: {settings.allowedRadiusMeters}m)</p>
                   </div>
                 </div>

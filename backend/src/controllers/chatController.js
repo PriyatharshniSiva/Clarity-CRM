@@ -120,7 +120,7 @@ const getRooms = async (req, res) => {
           existingDirectUserIds.add(otherUser.id);
         }
       } else if (room.type === 'COMPANY') {
-        displayName = room.name || 'Innoviety Community';
+        displayName = room.name || 'Clarity Community';
       } else if (room.type === 'PROJECT') {
         displayName = room.name || room.task?.title || 'Project Chat';
       }
@@ -183,7 +183,7 @@ const getRooms = async (req, res) => {
     }
 
     // Strict Ordering per Requirement 9:
-    // Section 1: Company Group (💬 Innoviety Community) -> ALWAYS #1 (index 0)
+    // Section 1: Company Group (💬 Clarity Community) -> ALWAYS #1 (index 0)
     // Section 2: Active Project Groups (PROJECT/TEAM) -> ordered by lastActivityAt desc
     // Section 3: Direct Messages (DIRECT) -> ordered by lastActivityAt desc
     const companyRoom = formattedRooms.find(r => r.type === 'COMPANY');
@@ -859,9 +859,9 @@ const searchChat = async (req, res) => {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { employeeId: { contains: query, mode: 'insensitive' } }
+          { name: { contains: query } },
+          { email: { contains: query } },
+          { employeeId: { contains: query } }
         ]
       },
       select: { id: true, name: true, email: true, role: true, profilePic: true, employeeId: true },
@@ -870,7 +870,7 @@ const searchChat = async (req, res) => {
 
     const rooms = await prisma.chatRoom.findMany({
       where: {
-        name: { contains: query, mode: 'insensitive' },
+        name: { contains: query },
         isArchived: false
       },
       take: 10
@@ -878,7 +878,7 @@ const searchChat = async (req, res) => {
 
     const messages = await prisma.chatMessage.findMany({
       where: {
-        message: { contains: query, mode: 'insensitive' },
+        message: { contains: query },
         isDeleted: false
       },
       include: {

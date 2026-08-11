@@ -1,7 +1,7 @@
 const prisma = require('../utils/db');
 
 /**
- * Ensures the default Company Chat Room ("Innoviety Community") exists
+ * Ensures the default Company Chat Room ("Clarity Community") exists
  * and all active CRM users are added as members.
  */
 const ensureCompanyChatRoom = async () => {
@@ -23,7 +23,7 @@ const ensureCompanyChatRoom = async () => {
     if (!companyRoom) {
       companyRoom = await prisma.chatRoom.create({
         data: {
-          name: 'Innoviety Community',
+          name: 'Clarity Community',
           type: 'COMPANY',
           isDefault: true,
           isArchived: false,
@@ -33,7 +33,7 @@ const ensureCompanyChatRoom = async () => {
           }
         }
       });
-      console.log(`[ChatService] Created default Company Group "Innoviety Community" with ${activeUserIds.length} members.`);
+      console.log(`[ChatService] Created default Company Group "Clarity Community" with ${activeUserIds.length} members.`);
     } else {
       const existingMembers = await prisma.chatRoomMember.findMany({
         where: { roomId: companyRoom.id },

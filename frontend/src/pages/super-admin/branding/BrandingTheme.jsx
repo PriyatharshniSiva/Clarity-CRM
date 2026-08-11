@@ -79,7 +79,7 @@ const BrandingTheme = () => {
     updateThemeSettings
   } = useTheme();
 
-  const [companyName, setCompanyName] = useState(ctxName || 'Innoviety Enterprise');
+  const [companyName, setCompanyName] = useState(ctxName || 'Clarity Enterprise');
   const [selectedTheme, setSelectedTheme] = useState(ctxTheme || 'emerald');
   const [themeMode, setThemeMode] = useState(ctxMode || 'light');
   const [logoFile, setLogoFile] = useState(null);
@@ -214,7 +214,7 @@ const BrandingTheme = () => {
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. Innoviety Enterprise"
+              placeholder="e.g. Clarity Enterprise"
               className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
             <p className="text-[10px] text-muted-foreground">

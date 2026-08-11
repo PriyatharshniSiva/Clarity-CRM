@@ -1,118 +1,39 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  ADMIN
-  SUPER_ADMIN
-  TEAM_LEADER
-  INTERN
-  EMPLOYEE
-}
 
-enum TicketCategory {
-  TECHNICAL
-  PROJECT
-  HR
-  SOFTWARE
-  HARDWARE
-  GENERAL
-}
 
-enum TicketStatus {
-  OPEN
-  ASSIGNED
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
-}
 
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  WAITING_FOR_REVIEW
-  APPROVED
-  REJECTED
-}
 
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
 
-enum ProjectStatus {
-  DRAFT
-  SCHEDULED
-  ACTIVE
-  ON_HOLD
-  COMPLETED
-  CANCELLED
-  ARCHIVED
-}
 
-enum ProjectPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
 
-enum ProjectType {
-  CLIENT
-  INTERNAL
-  MAINTENANCE
-  RND
-  TRAINING
-}
 
-enum ProjectRole {
-  PROJECT_LEADER
-  TEAM_LEADER
-  MEMBER
-  OBSERVER
-}
 
-enum ChatRoomStatus {
-  ACTIVE
-  ARCHIVED
-}
 
-enum MilestoneStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-}
 
-enum WorkLogStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
 
-enum ApprovalStatus {
-  NOT_REQUIRED
-  PENDING
-  APPROVED
-  REJECTED
-}
 
-enum AttendanceStatus {
-  PRESENT
-  LATE
-  HALF_DAY
-  ABSENT
-  LEAVE
-  WORK_FROM_HOME
-  MISSED
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 model User {
   id               String           @id @default(uuid())
@@ -125,7 +46,7 @@ model User {
   college          String?
   department       String?
   joiningDate      DateTime         @default(now())
-  role             Role             @default(INTERN)
+  role String @default("INTERN")
   status           String           @default("ACTIVE") // ACTIVE, INACTIVE
   profilePic       String?          // File path/URL
   candidateType    String?          // Student, Graduate, Intern, Fresher, Professional
@@ -140,8 +61,8 @@ model User {
   companyName      String?
   designation      String?
   totalExperience  String?
-  notificationPreferences Json?
-  customData              Json?
+  notificationPreferences String?
+  customData              String?
   casualLeaveQuota        Int              @default(12)
   sickLeaveQuota          Int              @default(12)
   emergencyLeaveQuota     Int              @default(6)
@@ -220,7 +141,7 @@ model TeamMember {
 model Attendance {
   id               String           @id @default(uuid())
   userId           String
-  date             DateTime         @db.Date
+  date             DateTime         
   clockIn          DateTime
   clockOut     DateTime?
   clockInLocation  String?
@@ -229,7 +150,7 @@ model Attendance {
   browser      String?
   device       String?
   workingHours Float?           // Decimals representing decimal hours
-  status       AttendanceStatus @default(PRESENT)
+  status String @default("PRESENT")
   editedBy     String?          // User ID who edited attendance
   lateMinutes     Int?
   earlyWindowUsed Int?
@@ -245,13 +166,13 @@ model Task {
   id          String       @id @default(uuid())
   title       String
   description String
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(PENDING)
+  priority String @default("MEDIUM")
+  status String @default("PENDING")
   deadline    DateTime
   teamId      String?
   assigneeId  String
   creatorId   String
-  attachments String[]     // List of file paths
+  attachments String     // List of file paths
   type        String?      @default("TASK") // TASK, BUG, STORY
   storyPoints Int?         @default(0)
   sprintName     String?
@@ -259,7 +180,7 @@ model Task {
   milestoneId    String?
   estimatedHours Float?          @default(0)
   actualHours    Float?          @default(0)
-  approvalStatus ApprovalStatus  @default(NOT_REQUIRED)
+  approvalStatus String @default("NOT_REQUIRED")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -283,7 +204,7 @@ model TaskSubmission {
   taskId      String
   userId      String
   submitNotes String?
-  files       String[] // File paths/URLs uploaded by intern
+  files       String // File paths/URLs uploaded by intern
   submittedAt DateTime @default(now())
 
   task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -312,35 +233,15 @@ model TaskHistory {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
-enum AssetStatus {
-  AVAILABLE
-  ASSIGNED
-  MAINTENANCE
-  LOST
-  DAMAGED
-  DISPOSED
-}
 
-enum AssetCategory {
-  LAPTOP
-  DESKTOP
-  MONITOR
-  MOBILE
-  KEYBOARD
-  MOUSE
-  HEADSET
-  TABLET
-  PRINTER
-  NETWORK
-  FURNITURE
-  OTHER
-}
+
+
 
 model Asset {
   id             String          @id @default(uuid())
   assetId        String          @unique // Auto-generated e.g. AST-1001
   name           String
-  category       AssetCategory   @default(LAPTOP)
+  category String @default("LAPTOP")
   brand          String?
   model          String?
   serialNumber   String?         @unique
@@ -350,7 +251,7 @@ model Asset {
   vendor         String?
   location       String?
   billPhoto      String?         // File path / URL for bill/invoice photocopy
-  status         AssetStatus     @default(AVAILABLE)
+  status String @default("AVAILABLE")
   description    String?
   
   // Current assignment snapshot / relation
@@ -391,8 +292,8 @@ model Ticket {
   id          String         @id @default(uuid())
   title       String
   description String
-  category    TicketCategory
-  status      TicketStatus   @default(OPEN)
+  category String
+  status String @default("OPEN")
   creatorId   String
   assigneeId  String?
   assetId     String?
@@ -461,7 +362,7 @@ model SystemSettings {
 
 model PlatformSettings {
   id            String   @id @default("PLATFORM")
-  companyName   String   @default("Innoviety Enterprise")
+  companyName   String   @default("Clarity")
   companyLogo   String?
   selectedTheme String   @default("emerald")
   themeMode     String   @default("light")
@@ -542,28 +443,18 @@ model Branch {
   @@unique([repoId, name])
 }
 
-enum ChatRoomType {
-  GLOBAL
-  COMPANY
-  TEAM
-  PROJECT
-  DIRECT
-}
 
-enum ChatMessageType {
-  TEXT
-  FILE
-  IMAGE
-}
+
+
 
 model ChatRoom {
   id             String           @id @default(uuid())
   name           String?
-  type           ChatRoomType     @default(DIRECT)
+  type String @default("DIRECT")
   teamId         String?
   taskId         String?
   projectId      String?          @unique
-  status         ChatRoomStatus   @default(ACTIVE)
+  status String @default("ACTIVE")
   lastMessageId  String?
   isDefault      Boolean          @default(false)
   isArchived     Boolean          @default(false)
@@ -583,9 +474,9 @@ model Project {
   projectCode        String          @unique // e.g. PRJ-1001
   name               String
   description        String?
-  type               ProjectType     @default(CLIENT)
-  status             ProjectStatus   @default(DRAFT)
-  priority           ProjectPriority @default(MEDIUM)
+  type String @default("CLIENT")
+  status String @default("DRAFT")
+  priority String @default("MEDIUM")
   
   estimatedStartDate DateTime
   estimatedEndDate   DateTime
@@ -619,7 +510,7 @@ model ProjectMember {
   id        String      @id @default(uuid())
   projectId String
   userId    String
-  role      ProjectRole @default(MEMBER)
+  role String @default("MEMBER")
   joinedAt  DateTime    @default(now())
 
   project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -634,7 +525,7 @@ model ProjectMilestone {
   title       String
   description String?
   dueDate     DateTime
-  status      MilestoneStatus @default(PENDING)
+  status String @default("PENDING")
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -662,7 +553,7 @@ model WorkLog {
   description  String
   hoursWorked  Float
   workDate     DateTime      @default(now())
-  status       WorkLogStatus @default(APPROVED)
+  status String @default("APPROVED")
   approvedById String?
   approvedAt   DateTime?
   createdAt    DateTime      @default(now())
@@ -704,8 +595,8 @@ model ProjectHistory {
   projectId   String
   changedById String
   action      String         // e.g. "CREATED", "STATUS_CHANGE", "PRIORITY_CHANGE", "MEMBER_ADDED", etc.
-  oldStatus   ProjectStatus?
-  newStatus   ProjectStatus?
+  oldStatus String?
+  newStatus String?
   detail      String
   createdAt   DateTime       @default(now())
 
@@ -731,7 +622,7 @@ model ChatMessage {
   roomId           String
   senderId         String
   message          String
-  messageType      ChatMessageType @default(TEXT)
+  messageType String @default("TEXT")
   attachmentUrl    String?
   fileName         String?
   fileSize         Int?
@@ -777,64 +668,23 @@ model MessageRead {
   @@unique([messageId, userId])
 }
 
-enum FieldType {
-  TEXT
-  TEXTAREA
-  EMAIL
-  PHONE
-  NUMBER
-  DATE
-  TIME
-  DATETIME
-  DROPDOWN
-  MULTISELECT
-  CHECKBOX
-  RADIO
-  FILE
-  IMAGE
-  URL
-  PASSWORD
-  COLOR
-  RATING
-  SWITCH
-}
 
-enum FormStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
 
-enum PlatformEntityType {
-  USER_PROFILE
-  INTERN_PROFILE
-  EMPLOYEE_PROFILE
-  TEAM_LEADER_PROFILE
-  ADMIN_PROFILE
-  REGISTRATION
-  PROJECT
-  TASK
-  ATTENDANCE
-  LEAVE
-  HELPDESK
-  ANNOUNCEMENT
-  ASSET
-  WORKLOG
-  TEAM
-  CLIENT
-}
+
+
+
 
 model CustomFormField {
   id                 String             @id @default(uuid())
-  entityType         PlatformEntityType
+  entityType String
   fieldKey           String
   label              String
   placeholder        String?
-  fieldType          FieldType          @default(TEXT)
-  options            Json?              // Array of string options
-  visibleTo          Json               // Array of roles
-  editableBy         Json               // Array of roles
-  requiredFor        Json               // Array of roles
+  fieldType String @default("TEXT")
+  options            String?              // Array of string options
+  visibleTo          String               // Array of roles
+  editableBy         String               // Array of roles
+  requiredFor        String               // Array of roles
 
   // Dynamic Validation Rules
   minLength          Int?
@@ -865,9 +715,9 @@ model CustomFormField {
 
 model CustomFormVersion {
   id          String             @id @default(uuid())
-  entityType  PlatformEntityType
+  entityType String
   version     Int                @default(1)
-  status      FormStatus         @default(DRAFT)
+  status String @default("DRAFT")
   createdById String
   createdBy   User               @relation(fields: [createdById], references: [id])
   fields      CustomFormField[]
@@ -880,7 +730,7 @@ model CustomFormVersion {
 
 model DynamicMenu {
   id         String        @id @default(uuid())
-  role       Role
+  role String
   menuKey    String
   label      String
   icon       String?
@@ -903,35 +753,23 @@ model BuilderHistory {
   performedById String
   performedBy   User                @relation(fields: [performedById], references: [id])
   builderType   String              // FORM, MENU
-  entityType    PlatformEntityType?
+  entityType String?
   action        String              // SAVE_DRAFT, PUBLISH, ROLLBACK
-  oldSnapshot   Json?
-  newSnapshot   Json?
+  oldSnapshot   String?
+  newSnapshot   String?
   details       String
   createdAt     DateTime            @default(now())
 }
 
-enum PayrollBatchStatus {
-  DRAFT
-  PREVIEW
-  LOCKED
-  REVIEW
-  PUBLISHED
-  COMPLETED
-  ROLLED_BACK
-}
 
-enum HolidayType {
-  NATIONAL
-  COMPANY
-  WEEKEND
-}
+
+
 
 model SalaryTemplate {
   id               String            @id @default(uuid())
   name             String            @unique // e.g. "Default Employee", "Senior Employee", "Manager", "Intern Stipend"
   description      String?
-  targetRole       Role              @default(EMPLOYEE)
+  targetRole String @default("EMPLOYEE")
   basicSalary      Float             @default(0)
   hra              Float             @default(0)
   da               Float             @default(0)
@@ -1004,8 +842,8 @@ model SalaryRevision {
 model HolidayCalendar {
   id               String      @id @default(uuid())
   title            String
-  date             DateTime    @unique @db.Date
-  type             HolidayType @default(COMPANY)
+  date             DateTime    @unique 
+  type String @default("COMPANY")
   isWorkingHoliday Boolean     @default(false)
   payMultiplier    Float       @default(2.0) // 2.0x for Holiday, 1.5x for Weekend
   remarks          String?
@@ -1038,7 +876,7 @@ model PayrollBatch {
   id              String             @id @default(uuid())
   month           Int                // 1 to 12
   year            Int                // e.g. 2026
-  status          PayrollBatchStatus @default(DRAFT)
+  status String @default("DRAFT")
   totalEmployees  Int                @default(0)
   totalGross      Float              @default(0)
   totalDeductions Float              @default(0)
@@ -1065,8 +903,8 @@ model Payslip {
   basicSalary        Float              @default(0)
   hra                Float              @default(0)
   da                 Float              @default(0)
-  allowancesJson     Json?              // Itemized allowances
-  deductionsJson     Json?              // Itemized deductions
+  allowancesString     String?              // Itemized allowances
+  deductionsString     String?              // Itemized deductions
   grossSalary        Float              @default(0)
   netSalary          Float              @default(0)
   
@@ -1081,7 +919,7 @@ model Payslip {
   holidayPay         Float              @default(0)
   lateDeduction      Float              @default(0)
 
-  status             PayrollBatchStatus @default(DRAFT)
+  status String @default("DRAFT")
   qrCodeHash         String?
   pdfPath            String?
   createdAt          DateTime           @default(now())

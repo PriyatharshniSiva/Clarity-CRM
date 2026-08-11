@@ -12,13 +12,13 @@ const getSettings = async (req, res) => {
       settings = await prisma.systemSettings.create({
         data: {
           id: 'GLOBAL',
-          companyName: 'INNOVEITY',
+          companyName: 'CLARITY INFOTECH',
           senderEmail: 'somusuraj72@gmail.com',
           internShiftStart: '09:30',
           internShiftEnd: '18:30',
           tlShiftStart: '09:30',
           tlShiftEnd: '18:30',
-          officeLocationName: 'Innoveity Headquarters',
+          officeLocationName: 'Clarity InfoTech Headquarters',
           earlyWindowMinutes: 30,
           gracePeriodMinutes: 15
         }
@@ -77,7 +77,7 @@ const updateSettings = async (req, res) => {
       },
       create: {
         id: 'GLOBAL',
-        companyName: companyName || 'INNOVEITY',
+        companyName: companyName || 'CLARITY INFOTECH',
         senderEmail: senderEmail || 'somusuraj72@gmail.com',
         internShiftStart: internShiftStart || '09:30',
         internShiftEnd: internShiftEnd || '18:30',
@@ -86,7 +86,7 @@ const updateSettings = async (req, res) => {
         officeLatitude: officeLatitude || 12.971598,
         officeLongitude: officeLongitude || 77.594562,
         allowedRadiusMeters: allowedRadiusMeters || 200.0,
-        officeLocationName: officeLocationName || 'Innoveity Headquarters',
+        officeLocationName: officeLocationName || 'Clarity InfoTech Headquarters',
         earlyWindowMinutes: earlyWindowMinutes !== undefined ? earlyWindowMinutes : 30,
         gracePeriodMinutes: gracePeriodMinutes !== undefined ? gracePeriodMinutes : 15
       }

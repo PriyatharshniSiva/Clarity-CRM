@@ -4,7 +4,7 @@ import api from '../services/api';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [companyName, setCompanyName] = useState('Clarity InfoTech');
+  const [companyName, setCompanyName] = useState('Clarity Enterprise');
   const [companyLogo, setCompanyLogo] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(localStorage.getItem('selectedTheme') || 'emerald');
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');

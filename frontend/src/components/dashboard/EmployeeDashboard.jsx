@@ -511,30 +511,31 @@ export const EmployeeDashboard = () => {
       animate="visible"
     >
       {/* 1. Personalized Welcome Banner Section */}
-      <motion.div variants={itemVariants} className="relative rounded-[28px] border border-border/80 bg-card p-6 md:p-8 shadow-sm backdrop-blur-xl overflow-hidden">
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <motion.div variants={itemVariants} className="relative rounded-[28px] border border-border/50 bg-card p-6 md:p-8 shadow-sm overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           {/* User Identity & Info */}
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="relative">
-              <UserAvatar user={user} className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl ring-4 ring-primary/20 shadow-lg object-cover" />
-              <span className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-card ${
-                clockedRecord && !clockedRecord.clockOut ? 'bg-success' : 'bg-amber-500'
-              }`} title={clockedRecord && !clockedRecord.clockOut ? 'Clocked In & Active' : 'Not Clocked In'} />
+              <UserAvatar user={user} className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-md object-cover" />
+              <span className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white dark:border-card ${
+                clockedRecord && !clockedRecord.clockOut ? 'bg-emerald-500' : 'bg-amber-500'
+              }`} title={clockedRecord && !clockedRecord.clockOut ? 'Clocked In' : 'Not Clocked In'} />
             </div>
 
-            <div className="space-y-1.5 text-left">
-              <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-                {getGreeting()}, {user.name} 👋
-              </h1>
+            <div className="space-y-2 text-left">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-black text-[#0A0E39] dark:text-white tracking-tight">
+                  {getGreeting()}, {user.name} 👋
+                </h1>
+              </div>
               <div>
-                <span className="inline-block px-3 py-0.5 text-xs font-bold rounded-full bg-primary/10 text-primary border border-primary/20">
-                  {user.role}
+                <span className="inline-block px-3 py-0.5 text-[10px] font-bold rounded-full border border-emerald-500 text-emerald-600 bg-transparent uppercase tracking-wider">
+                  {user.role.replace('_', ' ')}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground font-semibold pt-0.5">
-                <span>{user?.role === 'INTERN' ? 'Intern ID' : 'Employee ID'}: <strong className="text-foreground font-mono">{user.internId || user.employeeId || user.id?.substring(0, 8)}</strong></span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-semibold pt-1">
+                <span>{user?.role === 'INTERN' ? 'Intern ID' : 'Employee ID'}: <strong className="text-foreground font-mono">{user.internId || user.employeeId || user.id?.substring(0, 8) || 'N/A'}</strong></span>
                 <span>•</span>
                 <span>Dept: <strong className="text-foreground">{user.department || 'General'}</strong></span>
                 <span>•</span>
@@ -550,29 +551,29 @@ export const EmployeeDashboard = () => {
           </div>
 
           {/* Live Date & Time Counter Badge with Clock In/Out Buttons underneath */}
-          <div className="flex flex-col items-center justify-center gap-2 bg-muted/40 border border-border/60 rounded-2xl p-4 shrink-0 text-center min-w-[210px]">
-            <div className="text-center space-y-0.5">
-              <span className="text-2xl font-black font-mono tracking-tight text-primary block">
+          <div className="bg-white dark:bg-muted/40 border border-gray-100 dark:border-border/60 rounded-2xl p-4 shadow-sm shrink-0 text-center min-w-[240px]">
+            <div className="text-center space-y-1">
+              <span className="text-xl font-black font-mono tracking-tight text-[#0A9E71] dark:text-emerald-400 block">
                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
-              <span className="text-xs text-muted-foreground font-bold block">
+              <span className="text-[11px] text-muted-foreground font-semibold block">
                 {time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/40 w-full">
+            <div className="flex items-center justify-center gap-2 pt-3 mt-3 border-t border-gray-100 dark:border-border/40 w-full">
               <button
                 onClick={handleClockIn}
                 disabled={clockLoading || !clockStatus?.canClockIn}
-                className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 bg-[#78d0b0] hover:bg-[#68c0a0] text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Play className="h-3.5 w-3.5 fill-current" />
+                <Play className="h-3 w-3 fill-current" />
                 <span>Clock In</span>
               </button>
               <button
                 onClick={handleClockOut}
                 disabled={clockLoading || !clockStatus?.canClockOut}
-                className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 bg-[#f08a9d] hover:bg-[#e07a8d] text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Square className="h-3 w-3 fill-current" />
                 <span>Clock Out</span>

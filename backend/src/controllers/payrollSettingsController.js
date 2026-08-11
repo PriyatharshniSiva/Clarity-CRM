@@ -50,7 +50,7 @@ const updatePayrollSettings = async (req, res) => {
         minimumWorkingHours: minimumWorkingHours !== undefined ? Number(minimumWorkingHours) : 4.0,
         roundingRule: roundingRule || 'ROUND_HALF_UP',
         payslipTemplate: payslipTemplate || 'STANDARD',
-        companyName: companyName || 'Innoveity',
+        companyName: companyName || 'Clarity InfoTech',
         companyLogo: companyLogo || null,
         companyAddress: companyAddress || '100 Innovation Towers, Cyber City, Bangalore - 560001',
         authorizedSignature: authorizedSignature || 'Authorized HR Signatory'
@@ -69,7 +69,7 @@ const updatePayrollSettings = async (req, res) => {
         minimumWorkingHours: minimumWorkingHours !== undefined ? Number(minimumWorkingHours) : 4.0,
         roundingRule: roundingRule || 'ROUND_HALF_UP',
         payslipTemplate: payslipTemplate || 'STANDARD',
-        companyName: companyName || 'Innoveity',
+        companyName: companyName || 'Clarity InfoTech',
         companyLogo: companyLogo || null,
         companyAddress: companyAddress || '100 Innovation Towers, Cyber City, Bangalore - 560001',
         authorizedSignature: authorizedSignature || 'Authorized HR Signatory'

@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding complete, accurate Innovety CRM dataset...');
+  console.log('Seeding complete, accurate Clarity CRM dataset...');
 
   // 0. Super Admin User
   const superAdminPass = await bcrypt.hash('SuperAdmin123!', 10);
@@ -296,7 +296,7 @@ async function main() {
     update: {},
     create: {
       id: 'GLOBAL',
-      companyName: 'INNOVEITY CRM',
+      companyName: 'CLARITY INFOTECH CRM',
       senderEmail: 'no-reply@enterprise-crm.com',
       internShiftStart: '09:30',
       internShiftEnd: '18:30',
@@ -305,7 +305,7 @@ async function main() {
       officeLatitude: 12.971598,
       officeLongitude: 77.594562,
       allowedRadiusMeters: 200.0,
-      officeLocationName: 'INNOVEITY Headquarters'
+      officeLocationName: 'CLARITY INFOTECH Headquarters'
     }
   });
 

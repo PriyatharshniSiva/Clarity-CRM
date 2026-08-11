@@ -141,8 +141,8 @@ export default function EmployeePayrollPage() {
             <div className="bg-white text-slate-900 p-8 rounded-xl border border-slate-200 space-y-6 text-xs">
               <div className="flex justify-between items-start border-b border-slate-300 pb-4">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{settings?.companyName || 'Innoveity'}</h2>
-                  <p className="text-slate-500 text-[11px] mt-0.5">{settings?.companyAddress || '100 Innovation Towers, Cyber City, Bangalore - 560001'}</p>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{settings?.companyName || 'Clarity InfoTech'}</h2>
+                  <p className="text-slate-500 text-[11px] mt-0.5">{settings?.companyAddress || '100 Clarity Towers, Cyber City, Bangalore - 560001'}</p>
                 </div>
                 <div className="text-right">
                   <span className="px-2.5 py-1 bg-slate-100 text-slate-800 font-black rounded text-[10px] uppercase">CONFIDENTIAL PAYSLIP</span>

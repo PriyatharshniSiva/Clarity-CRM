@@ -142,12 +142,12 @@ app.get('/api/platform/settings', async (req, res) => {
     let settings = await prisma.platformSettings.findUnique({ where: { id: 'PLATFORM' } });
     if (!settings) {
       settings = await prisma.platformSettings.create({
-        data: { id: 'PLATFORM', companyName: 'Innoviety Enterprise', selectedTheme: 'emerald', themeMode: 'light' }
+        data: { id: 'PLATFORM', companyName: 'Clarity Enterprise', selectedTheme: 'emerald', themeMode: 'light' }
       });
     }
     res.json(settings);
   } catch (err) {
-    res.json({ companyName: 'Innoviety Enterprise', selectedTheme: 'emerald', themeMode: 'light', companyLogo: null });
+    res.json({ companyName: 'Clarity Enterprise', selectedTheme: 'emerald', themeMode: 'light', companyLogo: null });
   }
 });
 app.use('/api/auth', authRoutes);

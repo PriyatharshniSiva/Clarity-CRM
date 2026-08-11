@@ -4,7 +4,7 @@ import { Save, Shield, Clock, Mail, Building, CheckCircle2, MapPin } from 'lucid
 
 const SiteSettings = () => {
   const [settings, setSettings] = useState({
-    companyName: 'Innoveity',
+    companyName: 'Clarity InfoTech',
     senderEmail: 'somusuraj72@gmail.com',
     internShiftStart: '09:30',
     internShiftEnd: '18:30',
@@ -13,7 +13,7 @@ const SiteSettings = () => {
     officeLatitude: 12.971598,
     officeLongitude: 77.594562,
     allowedRadiusMeters: 200,
-    officeLocationName: 'Innoveity Headquarters',
+    officeLocationName: 'Clarity InfoTech Headquarters',
     earlyWindowMinutes: 30,
     gracePeriodMinutes: 15
   });
@@ -143,7 +143,7 @@ const SiteSettings = () => {
                   name="companyName"
                   value={settings.companyName}
                   onChange={handleChange}
-                  placeholder="e.g. Innoveity"
+                  placeholder="e.g. Clarity InfoTech"
                   className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   required
                 />
@@ -189,7 +189,7 @@ const SiteSettings = () => {
                 name="officeLocationName"
                 value={settings.officeLocationName || ''}
                 onChange={handleChange}
-                placeholder="e.g. Innoveity Office, Bangalore"
+                placeholder="e.g. Clarity InfoTech Office, Bangalore"
                 className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 required
               />
