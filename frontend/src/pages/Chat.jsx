@@ -381,7 +381,9 @@ const Chat = () => {
 
   // Handle click outside & keydown for context menu
   useEffect(() => {
-    const handleGlobalClick = () => {
+    const handleGlobalClick = (e) => {
+      // Don't close if they clicked the toggle button itself
+      if (e.target.closest('.message-options-btn')) return;
       setContextMenu(null);
       setActiveMenuMsgId(null);
     };
@@ -1387,7 +1389,7 @@ const Chat = () => {
                                         e.stopPropagation();
                                         setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id);
                                       }}
-                                      className="p-1 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-all shadow-xs"
+                                      className="message-options-btn p-1 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-all shadow-xs"
                                       title="Message options"
                                     >
                                       <MoreVertical className="h-3.5 w-3.5 text-white" />

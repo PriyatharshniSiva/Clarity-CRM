@@ -27,7 +27,7 @@ const getSalaryStructure = async (req, res) => {
     });
 
     if (!structure) {
-      return res.status(404).json({ message: 'Salary structure not found for this user.' });
+      return res.status(200).json(null);
     }
 
     res.json(structure);

@@ -204,12 +204,23 @@ const Attendance = () => {
     }
   };
 
-  const getCoordinatesObj = () => {
-    return new Promise((resolve) => {
+  const getCoordinatesObj = async () => {
+    return new Promise(async (resolve) => {
       if (!navigator.geolocation) {
         resolve(null);
         return;
       }
+      
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission.state === 'denied') {
+          resolve(null);
+          return;
+        }
+      } catch (e) {
+        // Permissions API might not be supported on all browsers, gracefully ignore
+      }
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = position.coords.latitude.toFixed(6);
@@ -217,7 +228,7 @@ const Attendance = () => {
           resolve({ lat, lon });
         },
         (error) => {
-          console.warn('Geolocation error:', error);
+          // Silently handle geolocation denial
           resolve(null);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }

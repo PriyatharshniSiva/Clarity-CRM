@@ -21,9 +21,9 @@ export default function EmployeePayrollPage() {
     try {
       setLoading(true);
       const [structRes, revRes, psRes] = await Promise.all([
-        api.get('/payroll/salary-structures/my'),
-        api.get(`/payroll/salary-structures/revisions/${user.id}`),
-        api.get('/payroll/payslips')
+        api.get('/payroll/salary-structures/my').catch(() => ({ data: null })),
+        api.get(`/payroll/salary-structures/revisions/${user.id}`).catch(() => ({ data: [] })),
+        api.get('/payroll/payslips').catch(() => ({ data: [] }))
       ]);
       setStructure(structRes.data);
       setRevisions(revRes.data);

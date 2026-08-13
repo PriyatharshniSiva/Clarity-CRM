@@ -13,16 +13,18 @@ import {
   CheckCircle,
   AlertTriangle,
   History,
-  Laptop
+  Laptop,
+  Trash2
 } from 'lucide-react';
 
 const Profile = () => {
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, deleteAccount } = useAuth();
   const location = useLocation();
 
   // Basic Profile form
   const [profileForm, setProfileForm] = useState({
     name: user?.name || '',
+    email: user?.email || '',
     phone: user?.phone || '',
     college: user?.college || '',
     department: user?.department || ''
@@ -88,6 +90,7 @@ const Profile = () => {
     if (user) {
       setProfileForm({
         name: user.name || '',
+        email: user.email || '',
         phone: user.phone || '',
         college: user.college || '',
         department: user.department || ''
@@ -139,6 +142,17 @@ const Profile = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) {
+      setLoading(true);
+      const res = await deleteAccount();
+      setLoading(false);
+      if (!res.success) {
+        setAlert({ type: 'error', text: res.message });
+      }
+    }
+  };
+
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -149,6 +163,7 @@ const Profile = () => {
     setLoading(true);
     const formData = new FormData();
     formData.append('name', profileForm.name || user?.name || '');
+    formData.append('email', profileForm.email || user?.email || '');
     formData.append('phone', profileForm.phone || user?.phone || '');
     formData.append('college', profileForm.college || user?.college || '');
     formData.append('department', profileForm.department || user?.department || '');
@@ -162,6 +177,28 @@ const Profile = () => {
       setAvatar(null);
     } else {
       setAlert({ type: 'error', text: res.message || 'Failed to upload profile photo.' });
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('name', profileForm.name || user?.name || '');
+    formData.append('email', profileForm.email || user?.email || '');
+    formData.append('phone', profileForm.phone || user?.phone || '');
+    formData.append('college', profileForm.college || user?.college || '');
+    formData.append('department', profileForm.department || user?.department || '');
+    formData.append('removeProfilePic', 'true');
+
+    const res = await updateProfile(formData);
+    setLoading(false);
+
+    if (res.success) {
+      setAlert({ type: 'success', text: 'Profile photo removed successfully!' });
+      setPreviewUrl(null);
+      setAvatar(null);
+    } else {
+      setAlert({ type: 'error', text: res.message || 'Failed to remove profile photo.' });
     }
   };
 
@@ -188,33 +225,51 @@ const Profile = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Card & Avatar */}
         <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-md text-center flex flex-col items-center justify-center">
-          <div className="relative group">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt={user?.name}
-                className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/20 shadow-lg"
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative group">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={user?.name}
+                  className="h-28 w-28 rounded-2xl object-cover ring-4 ring-primary/20 shadow-lg"
+                />
+              ) : (
+                <UserAvatar
+                  user={user}
+                  className="h-28 w-28 rounded-2xl ring-4 ring-primary/20 shadow-lg text-3xl font-black"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                className="hidden"
+                id="avatar-upload"
+                accept="image/*"
+                onChange={handleAvatarChange}
               />
-            ) : (
-              <UserAvatar
-                user={user}
-                className="h-28 w-28 rounded-2xl ring-4 ring-primary/20 shadow-lg text-3xl font-black"
-              />
-            )}
-            <input
-              type="file"
-              className="hidden"
-              id="avatar-upload"
-              accept="image/*"
-              onChange={handleAvatarChange}
-            />
-            <label
-              htmlFor="avatar-upload"
-              className="absolute -bottom-2 -right-2 p-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl cursor-pointer shadow-md hover:scale-105 transition-all flex items-center justify-center"
-              title="Click to upload new profile photo"
-            >
-              <Upload className="h-4 w-4" />
-            </label>
+              <label
+                htmlFor="avatar-upload"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl cursor-pointer shadow-sm hover:scale-105 transition-all text-xs font-bold"
+                title="Click to upload new profile photo"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {previewUrl ? 'Change' : 'Upload'}
+              </label>
+
+              {(user?.profilePic || previewUrl) && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl cursor-pointer shadow-sm hover:scale-105 transition-all text-xs font-bold"
+                  title="Remove profile photo"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
 
           <h3 className="mt-4 font-black text-lg text-foreground">{user?.name}</h3>
@@ -257,6 +312,16 @@ const Profile = () => {
                   onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                   className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   placeholder="Enter full name"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground">Email Address</label>
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  className="w-full rounded-2xl border border-border/70 bg-background px-4 py-2.5 text-xs font-semibold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  placeholder="Enter email address"
                 />
               </div>
               <div className="flex flex-col gap-1.5">

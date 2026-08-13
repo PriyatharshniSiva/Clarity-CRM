@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, getProfile, updateProfile, changePassword, resetPasswordRequest } = require('../controllers/authController');
+const { login, getProfile, updateProfile, changePassword, resetPasswordRequest, deleteProfile } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -15,6 +15,7 @@ const profileUpload = upload.fields([
 // Protected routes
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, profileUpload, updateProfile);
+router.delete('/profile', authenticate, deleteProfile);
 router.put('/change-password', authenticate, changePassword);
 
 module.exports = router;

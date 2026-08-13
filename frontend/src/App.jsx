@@ -6,6 +6,7 @@ import DashboardLayout from './components/layouts/DashboardLayout';
 
 // Pages
 import Login from './pages/Login';
+import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import Interns from './pages/Interns';
 import TeamLeaders from './pages/TeamLeaders';
@@ -61,6 +62,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (!user) {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/super-admin') || currentPath.startsWith('/superadmin') || currentPath.startsWith('/admin')) {
+      return <Navigate to="/admin-login" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -83,13 +88,16 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 const App = () => {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <ThemeProvider>
           <SocketProvider>
             <Routes>
               {/* Public Auth Route */}
               <Route path="/login" element={<Login />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/superadmin" element={<AdminLogin />} />
 
               {/* Super Admin Platform Control Center Routes */}
               <Route

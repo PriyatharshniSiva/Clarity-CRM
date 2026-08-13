@@ -112,6 +112,7 @@ const updateProfile = async (req, res) => {
   try {
     const {
       name,
+      email,
       phone,
       college,
       department,
@@ -125,7 +126,8 @@ const updateProfile = async (req, res) => {
       keySkills,
       companyName,
       designation,
-      totalExperience
+      totalExperience,
+      removeProfilePic
     } = req.body;
 
     let profilePicPath = undefined;
@@ -141,8 +143,17 @@ const updateProfile = async (req, res) => {
       resumePath = `/uploads/resumes/${req.files.resume[0].filename}`;
     }
 
+    // Ensure email is not duplicate if changed
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({ where: { email } });
+      if (existingEmail && existingEmail.id !== req.user.id) {
+        return res.status(400).json({ message: 'Email is already in use by another account.' });
+      }
+    }
+
     const data = {
       ...(name !== undefined && { name }),
+      ...(email !== undefined && { email }),
       ...(phone !== undefined && { phone }),
       ...(college !== undefined && { college: college || companyName || null }),
       ...(department !== undefined && { department }),
@@ -158,6 +169,7 @@ const updateProfile = async (req, res) => {
       ...(designation !== undefined && { designation: designation || null }),
       ...(totalExperience !== undefined && { totalExperience: totalExperience || null }),
       ...(profilePicPath && { profilePic: profilePicPath }),
+      ...(removeProfilePic === 'true' && { profilePic: null }),
       ...(resumePath && { resume: resumePath })
     };
 
@@ -270,10 +282,77 @@ const resetPasswordRequest = async (req, res) => {
   }
 };
 
+const deleteProfile = async (req, res) => {
+  try {
+    const id = req.user.id;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Reset references on assigned Assets
+      await tx.asset.updateMany({
+        where: { assignedToId: id },
+        data: {
+          assignedToId: null,
+          assignedDate: null,
+          expectedReturn: null,
+          status: 'AVAILABLE'
+        }
+      });
+
+      // 2. Set assignedById = null on AssetAssignment history
+      await tx.assetAssignment.updateMany({
+        where: { assignedById: id },
+        data: { assignedById: null }
+      });
+
+      // 3. Reset references on assigned Tickets
+      await tx.ticket.updateMany({
+        where: { assigneeId: id },
+        data: { assigneeId: null }
+      });
+
+      // 4. Reset references on Teams led by this user
+      await tx.team.updateMany({
+        where: { leaderId: id },
+        data: { leaderId: null }
+      });
+
+      // 5. Delete team memberships
+      await tx.teamMember.deleteMany({
+        where: { userId: id }
+      });
+
+      // 6. Reset targetUserId on Announcements
+      await tx.announcement.updateMany({
+        where: { targetUserId: id },
+        data: { targetUserId: null }
+      });
+
+      // 7. Delete ChatRoomMember records
+      await tx.chatRoomMember.deleteMany({
+        where: { userId: id }
+      });
+
+      // 8. Permanently delete user record
+      await tx.user.delete({
+        where: { id }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully.'
+    });
+  } catch (error) {
+    console.error('Delete profile error:', error);
+    res.status(500).json({ message: 'Failed to delete account. Please try again.' });
+  }
+};
+
 module.exports = {
   login,
   getProfile,
   updateProfile,
   changePassword,
-  resetPasswordRequest
+  resetPasswordRequest,
+  deleteProfile
 };

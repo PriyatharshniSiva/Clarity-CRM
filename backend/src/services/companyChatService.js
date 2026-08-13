@@ -35,6 +35,14 @@ const ensureCompanyChatRoom = async () => {
       });
       console.log(`[ChatService] Created default Company Group "Clarity Community" with ${activeUserIds.length} members.`);
     } else {
+      if (companyRoom.name !== 'Clarity Community') {
+        await prisma.chatRoom.update({
+          where: { id: companyRoom.id },
+          data: { name: 'Clarity Community' }
+        });
+        console.log(`[ChatService] Renamed Company Group to "Clarity Community".`);
+      }
+
       const existingMembers = await prisma.chatRoomMember.findMany({
         where: { roomId: companyRoom.id },
         select: { userId: true }
@@ -44,8 +52,7 @@ const ensureCompanyChatRoom = async () => {
       const missingUserIds = activeUserIds.filter(id => !existingUserIds.has(id));
       if (missingUserIds.length > 0) {
         await prisma.chatRoomMember.createMany({
-          data: missingUserIds.map(userId => ({ roomId: companyRoom.id, userId })),
-          skipDuplicates: true
+          data: missingUserIds.map(userId => ({ roomId: companyRoom.id, userId }))
         });
         console.log(`[ChatService] Synced ${missingUserIds.length} active users into Company Group.`);
       }

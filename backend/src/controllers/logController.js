@@ -10,6 +10,10 @@ const getActivityLogs = async (req, res) => {
 
     const where = {};
 
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'SUPERADMIN') {
+      where.userId = req.user.id;
+    }
+
     if (action) {
       where.action = action;
     }

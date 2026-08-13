@@ -31,6 +31,10 @@ const upload = multer({
 
 // All Super Admin routes require JWT authentication and SUPER_ADMIN role guard
 router.use(authenticate);
+router.use((req, res, next) => {
+  console.log(`[SUPER ADMIN ROUTE] Path: ${req.path}, User: ${req.user.email}, Role: ${req.user.role}`);
+  next();
+});
 router.use(requireSuperAdmin);
 
 // Platform Overview & Settings

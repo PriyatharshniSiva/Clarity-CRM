@@ -8,6 +8,7 @@ const requireSuperAdmin = (req, res, next) => {
   }
 
   if (req.user.role !== 'SUPER_ADMIN') {
+    console.log('403 Forbidden! User Role:', req.user.role, 'User ID:', req.user.id);
     return res.status(403).json({
       message: 'Forbidden: Super Admin access required. Access to Platform Administration is restricted.'
     });

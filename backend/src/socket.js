@@ -7,8 +7,21 @@ let io;
 const init = (server) => {
   io = socketIo(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-      methods: ['GET', 'POST']
+      origin: (origin, callback) => {
+        const allowed = [
+          process.env.FRONTEND_URL || 'http://localhost:5173',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'http://127.0.0.1:5173'
+        ];
+        if (!origin || allowed.includes(origin) || origin.startsWith('http://localhost')) {
+          callback(null, true);
+        } else {
+          callback(null, true); // Fallback to allow for local dev
+        }
+      },
+      methods: ['GET', 'POST'],
+      credentials: true
     }
   });
 

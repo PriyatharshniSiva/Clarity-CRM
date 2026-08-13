@@ -1,308 +1,517 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { User, Lock, Loader2, ArrowRight, Eye, EyeOff, RefreshCw, CheckSquare, Square } from 'lucide-react';
+import './RobotLogin.css';
 
 const Login = () => {
-  const { user, login, requestPasswordReset } = useAuth();
-  const { companyName, companyLogo } = useTheme();
-  
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [forgotMode, setForgotMode] = useState(false);
-
-  // Forgot Password state
-  const [resetUserId, setResetUserId] = useState('');
-  const [resetSuccess, setResetSuccess] = useState('');
-  const [tempPassAlert, setTempPassAlert] = useState('');
-
+  const { user, login, logout } = useAuth();
+  const { companyLogo } = useTheme();
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const emailRef = useRef(null);
+  const passRef = useRef(null);
+
+  useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    if (!userId || !password) {
-      setError('Please enter both your User ID and password.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    const res = await login(userId, password);
-    setLoading(false);
-    if (res.success) {
-      navigate('/');
-    } else {
-      setError(res.message);
-    }
-  };
+  useEffect(() => {
+    // The Vanilla JS animation logic
+    const $ = (s) => document.querySelector(s);
 
-  const handleResetSubmit = async (e) => {
-    e.preventDefault();
-    if (!resetUserId) {
-      setError('Please enter your User ID.');
-      return;
+    const robot = $('#robot');
+    const eyes = $('#eyes');
+    const bubble = $('#bubble');
+    const bubbleText = $('#bubbleText');
+    const meter = $('#meter');
+    const meterBars = meter ? [...meter.children] : [];
+    const panelLabel = $('#panelLabel');
+    const emailI = $('#email');
+    const passI = $('#password');
+    const peekBtn = $('#togglePass');
+    const btn = $('#loginBtn');
+    const btnLabel = $('#btnLabel');
+
+    if (!robot || !emailI || !passI) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    let done = false;
+    let lastSaid = '';
+
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    function setMood(mood) {
+      if (!done && robot) robot.dataset.mood = mood;
     }
-    setError('');
-    setLoading(true);
-    setResetSuccess('');
-    setTempPassAlert('');
-    const res = await requestPasswordReset(resetUserId);
-    setLoading(false);
-    if (res.success) {
-      setResetSuccess(res.message);
-      if (res.tempPassword) {
-        setTempPassAlert(`Testing Note: Password reset to DOB: "${res.tempPassword}".`);
+
+    function say(text) {
+      if (text === lastSaid) return;
+      lastSaid = text;
+      if (bubbleText) bubbleText.textContent = text;
+      if (bubble) {
+        bubble.classList.remove('pop');
+        void bubble.offsetWidth;
+        bubble.classList.add('pop');
       }
+    }
+
+    function look(x, y) {
+      if (eyes) {
+        eyes.style.setProperty('--lx', `${x}px`);
+        eyes.style.setProperty('--ly', `${y}px`);
+      }
+    }
+
+    const head3d = document.querySelector('.head3d');
+    function tilt(ry, rx) {
+      if (head3d) {
+        head3d.style.setProperty('--ry', `${ry}deg`);
+        head3d.style.setProperty('--rx', `${rx}deg`);
+      }
+    }
+
+    function followTyping(input) {
+      const ratio = Math.min(input.value.length / 22, 1);
+      look(-6 + 12 * ratio, 5);
+      tilt(-5 + 10 * ratio, -8);
+    }
+
+    function turnAway(on) {
+      if (robot) robot.classList.toggle('is-turned', on);
+    }
+
+    // email
+    const onEmailFocus = () => {
+      turnAway(false);
+      setMood('watching');
+      say('User ID / Email next. I don\'t do spam.');
+      followTyping(emailI);
+    };
+    const onEmailInput = () => {
+      followTyping(emailI);
+      const v = emailI.value.trim();
+      if (v.length > 3) {
+        setMood('happy');
+        say(pick(['Now that is a proper ID.', 'Valid ID detected.']));
+      } else {
+        setMood('watching');
+      }
+    };
+    emailI.addEventListener('focus', onEmailFocus);
+    emailI.addEventListener('input', onEmailInput);
+
+    // password
+    const onPassFocus = () => {
+      setMood('shy');
+      turnAway(true);
+      look(0, 0);
+      tilt(0, 0);
+      say("A secret? Say no more. *turns around*");
+      if (panelLabel) panelLabel.textContent = 'NOT LOOKING';
+    };
+    const onPassBlur = (e) => {
+      if (e.relatedTarget === peekBtn) return;
+      turnAway(false);
+    };
+    const onPassInput = () => {
+      const v = passI.value;
+      let score = 0;
+      if (v.length >= 4) score++;
+      if (v.length >= 8) score++;
+      if (/\d/.test(v) && /[a-zA-Z]/.test(v)) score++;
+      if (/[^a-zA-Z0-9]/.test(v)) score++;
+      if (v.length > 0 && score === 0) score = 1;
+
+      if (meter) meter.dataset.lvl = score;
+      meterBars.forEach((bar, i) => bar.classList.toggle('on', i < score));
+      if (panelLabel) {
+        panelLabel.textContent = v.length === 0
+          ? 'NOT LOOKING'
+          : ['NOT LOOKING', 'TOO SHORT', 'GETTING THERE', 'STRONG', 'FORT KNOX'][score];
+      }
+    };
+    passI.addEventListener('focus', onPassFocus);
+    passI.addEventListener('blur', onPassBlur);
+    passI.addEventListener('input', onPassInput);
+
+    // peek button
+    const onPeekClick = () => {
+      const show = passI.type === 'password';
+      passI.type = show ? 'text' : 'password';
+      if (peekBtn) {
+        peekBtn.setAttribute('aria-pressed', String(show));
+        peekBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      }
+      if (show) say('Revealing it? Good thing I\'m facing the wall.');
+      passI.focus();
+    };
+    if (peekBtn) peekBtn.addEventListener('click', onPeekClick);
+
+    // button hover
+    function hype(on) {
+      if (done) return;
+      if (on && robot.classList.contains('is-pressed')) return;
+      robot.classList.toggle('is-hyped', on);
+      if (on) {
+        turnAway(false);
+        setMood('excited');
+        say(pick(['Ooh. Do it. Press it.', 'This is my favorite part.']));
+      } else {
+        setMood('idle');
+        say('The button misses you already.');
+      }
+    }
+    const onBtnEnter = () => hype(true);
+    const onBtnLeave = () => hype(false);
+    const onBtnFocus = () => hype(true);
+    const onBtnBlur = () => hype(false);
+    
+    if (btn) {
+      btn.addEventListener('mouseenter', onBtnEnter);
+      btn.addEventListener('mouseleave', onBtnLeave);
+      btn.addEventListener('focus', onBtnFocus);
+      btn.addEventListener('blur', onBtnBlur);
+    }
+
+    let pressTimer;
+    const onBtnDown = () => {
+      clearTimeout(pressTimer);
+      if (robot) {
+        robot.classList.add('is-pressed');
+        robot.dataset.mood = 'pressed';
+      }
+      say(pick(['Ahh. That’s the stuff.', 'Mmm. Satisfying.', 'Beep. Do that again.']));
+    };
+    function releasePress() {
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        if (robot) {
+          robot.classList.remove('is-pressed');
+          if (robot.dataset.mood === 'pressed') {
+            robot.dataset.mood = done ? 'success' : 'excited';
+          }
+        }
+      }, 340);
+    }
+    const onBtnUp = releasePress;
+    const onBtnCancel = releasePress;
+    const onBtnPointerLeave = () => {
+      if (robot && robot.classList.contains('is-pressed')) releasePress();
+    };
+    
+    if (btn) {
+      btn.addEventListener('pointerdown', onBtnDown);
+      btn.addEventListener('pointerup', onBtnUp);
+      btn.addEventListener('pointercancel', onBtnCancel);
+      btn.addEventListener('pointerleave', onBtnPointerLeave);
+    }
+
+    // blinking + follow the mouse
+    let blinkTimeout;
+    function blinkLoop() {
+      blinkTimeout = setTimeout(() => {
+        if (robot && robot.dataset.mood !== 'success' && !robot.classList.contains('is-turned')) {
+          if (eyes) {
+            eyes.classList.add('blink');
+            setTimeout(() => eyes.classList.remove('blink'), 150);
+          }
+        }
+        blinkLoop();
+      }, 2600 + Math.random() * 2600);
+    }
+    blinkLoop();
+
+    let rafPending = false;
+    const onMouseMove = (e) => {
+      const active = document.activeElement;
+      if (done || (active && active.tagName === 'INPUT')) return;
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        if (!robot) return;
+        const rect = robot.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = Math.max(-1, Math.min(1, (e.clientX - cx) / 260));
+        const dy = Math.max(-1, Math.min(1, (e.clientY - cy) / 260));
+        look(dx * 7, dy * 6);
+        if (!robot.classList.contains('is-turned')) tilt(dx * 12, -dy * 9);
+      });
+    };
+    document.addEventListener('mousemove', onMouseMove);
+
+    // cleanup
+    return () => {
+      emailI.removeEventListener('focus', onEmailFocus);
+      emailI.removeEventListener('input', onEmailInput);
+      passI.removeEventListener('focus', onPassFocus);
+      passI.removeEventListener('blur', onPassBlur);
+      passI.removeEventListener('input', onPassInput);
+      if (peekBtn) peekBtn.removeEventListener('click', onPeekClick);
+      if (btn) {
+        btn.removeEventListener('mouseenter', onBtnEnter);
+        btn.removeEventListener('mouseleave', onBtnLeave);
+        btn.removeEventListener('focus', onBtnFocus);
+        btn.removeEventListener('blur', onBtnBlur);
+        btn.removeEventListener('pointerdown', onBtnDown);
+        btn.removeEventListener('pointerup', onBtnUp);
+        btn.removeEventListener('pointercancel', onBtnCancel);
+        btn.removeEventListener('pointerleave', onBtnPointerLeave);
+      }
+      clearTimeout(blinkTimeout);
+      document.removeEventListener('mousemove', onMouseMove);
+    };
+  }, []);
+
+  // Form submission handled React-way
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log('Login attempt triggered - HMR forced update');
+    
+    const emailI = emailRef.current;
+    const passI = passRef.current;
+    const form = e.currentTarget;
+    const robot = document.querySelector('#robot');
+    const bubbleText = document.querySelector('#bubbleText');
+    const bubble = document.querySelector('#bubble');
+    const btn = document.querySelector('#loginBtn');
+    const btnLabel = document.querySelector('#btnLabel');
+    const eyes = document.querySelector('#eyes');
+    const head3d = document.querySelector('.head3d');
+
+    const say = (text) => {
+      if (bubbleText) bubbleText.textContent = text;
+      if (bubble) {
+        bubble.classList.remove('pop');
+        void bubble.offsetWidth;
+        bubble.classList.add('pop');
+      }
+    };
+    const setMood = (mood) => {
+      if (robot) robot.dataset.mood = mood;
+    };
+    const turnAway = (on) => {
+      if (robot) robot.classList.toggle('is-turned', on);
+    };
+
+    const emailVal = emailI?.value?.trim();
+    const passVal = passI?.value;
+
+    const complaints = [];
+    if (!emailVal) complaints.push(['User ID or Email is required.', emailI]);
+    else if (!passVal) complaints.push(['A password would help.', passI]);
+
+    if (complaints.length > 0) {
+      const [msg, field] = complaints[0];
+      setTimeout(() => { say(msg); setMood('watching'); }, 380);
+      form.classList.remove('shake');
+      void form.offsetWidth;
+      form.classList.add('shake');
+      if (field) field.focus();
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    // Call backend login
+    const res = await login(emailVal, passVal);
+    
+    if (res.success) {
+      if (res.role === 'ADMIN' || res.role === 'SUPER_ADMIN') {
+        logout();
+        setMood('error');
+        say("Admins must use the Admin Portal.");
+        if (form) {
+          form.classList.remove('shake');
+          void form.offsetWidth;
+          form.classList.add('shake');
+        }
+        setLoading(false);
+        setTimeout(() => {
+          navigate('/admin-login');
+        }, 2500);
+        return;
+      }
+
+      // Success animation
+      turnAway(false);
+      if (robot) robot.classList.remove('is-hyped');
+      
+      setTimeout(() => {
+        if (robot) robot.dataset.mood = 'success';
+        say(`Access granted. Welcome.`);
+        if (btn) btn.classList.add('is-success');
+        if (btnLabel) btnLabel.textContent = 'ACCESS GRANTED ✓';
+        
+        if (eyes) {
+          eyes.style.setProperty('--lx', `0px`);
+          eyes.style.setProperty('--ly', `0px`);
+        }
+        if (head3d) {
+          head3d.style.setProperty('--ry', `0deg`);
+          head3d.style.setProperty('--rx', `0deg`);
+        }
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduceMotion && robot) {
+          robot.classList.add('is-spinning');
+          setTimeout(() => robot.classList.remove('is-spinning'), 950);
+          confetti();
+        }
+      }, 420);
+
+      // Navigate after animation
+      setTimeout(() => {
+        setLoading(false);
+        navigate('/');
+      }, 2500);
+
     } else {
+      setLoading(false);
       setError(res.message);
+      
+      // Error animation
+      setTimeout(() => { say("Login failed. Try again."); setMood('watching'); }, 380);
+      form.classList.remove('shake');
+      void form.offsetWidth;
+      form.classList.add('shake');
+      if (passI) passI.focus();
     }
   };
 
-  const displayName = companyName || 'CLARITY INFOTECH';
-  const logoSrc = companyLogo || '/logo.png';
+  function confetti() {
+    const btn = document.querySelector('#loginBtn');
+    const host = document.querySelector('.scene');
+    if (!btn || !host) return;
+
+    const colors = ['#ff6b4b', '#2ec4b6', '#ffc53d', '#23252d', '#fffdf8'];
+    const origin = btn.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const ox = origin.left - hostRect.left + origin.width / 2;
+    const oy = origin.top - hostRect.top;
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    for (let i = 0; i < 70; i++) {
+      const bit = document.createElement('span');
+      bit.className = 'confetti';
+      bit.style.background = pick(colors);
+      if (Math.random() > .5) bit.style.borderRadius = '50%';
+      host.appendChild(bit);
+
+      const angle = -Math.PI / 2 + (Math.random() - .5) * 1.6;
+      const speed = 240 + Math.random() * 380;
+      const tx = Math.cos(angle) * speed;
+      const ty = Math.sin(angle) * speed;
+
+      bit.animate(
+        [
+          { transform: `translate(${ox}px, ${oy}px) rotate(0deg) scale(1)`, opacity: 1 },
+          { transform: `translate(${ox + tx}px, ${oy + ty + 320}px) rotate(${540 * (Math.random() > .5 ? 1 : -1)}deg) scale(.6)`, opacity: 0 }
+        ],
+        { duration: 1100 + Math.random() * 700, easing: 'cubic-bezier(.15,.6,.35,1)' }
+      ).onfinish = function () { bit.remove(); };
+    }
+  }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6 font-sans theme-canvas-bg overflow-hidden transition-colors duration-300">
-      
-      {/* Decorative ambient background glows (Driven by Theme Primary Color) */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute -top-40 -left-40 h-[650px] w-[650px] rounded-full blur-3xl opacity-20 transition-all duration-500" 
-          style={{ backgroundColor: 'rgb(var(--primary))' }} 
-        />
-        <div 
-          className="absolute -bottom-40 -right-40 h-[650px] w-[650px] rounded-full blur-3xl opacity-20 transition-all duration-500" 
-          style={{ backgroundColor: 'rgb(var(--primary))' }} 
-        />
-      </div>
+    <div className="robot-login-container">
+      <div className="scene">
+        <main className="stage" id="stage">
+          <div className="robot" id="robot" data-mood="idle">
+            <div className="bubble" id="bubble" role="status" aria-live="polite">
+              <span id="bubbleText">Hi. I'm Volt. I guard this form.</span>
+            </div>
 
-      {/* Main 2-Column Enterprise Login Modal Container */}
-      <div className="relative z-10 w-full max-w-4xl rounded-[32px] bg-card text-card-foreground shadow-2xl shadow-black/10 border border-border/80 overflow-hidden flex flex-col lg:flex-row min-h-[580px] transition-all duration-300">
-        
-        {/* LEFT COLUMN: Hero Branding Panel with 3D Clockwise Rolling Node Sphere & Centered Logo */}
-        <div className="w-full lg:w-1/2 bg-muted/40 border-b lg:border-b-0 lg:border-r border-border/60 p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-          
-          {/* Dynamic Theme Gradient Background Accent */}
-          <div 
-            className="absolute inset-0 pointer-events-none transition-all duration-500 opacity-10" 
-            style={{ 
-              background: 'radial-gradient(circle at 30% 30%, rgb(var(--primary)), transparent 70%)' 
-            }} 
-          />
+            <div className="antenna" aria-hidden="true">
+              <span className="antenna-rod"></span>
+              <span className="antenna-tip"></span>
+            </div>
 
-          {/* Top Brand Tag */}
-          <div className="relative z-10 flex items-center gap-2">
-            <span 
-              className="h-2 w-2 rounded-full animate-pulse" 
-              style={{ backgroundColor: 'rgb(var(--primary))' }} 
-            />
-            <span className="text-[11px] font-extrabold tracking-widest text-muted-foreground uppercase">
-              {displayName}
-            </span>
-          </div>
+            <div className="head3d" aria-hidden="true">
+              <div className="head" id="head">
+                <span className="ear ear--l"></span>
+                <span className="ear ear--r"></span>
 
-          {/* CENTER: 3D Connected Node Sphere Animation (Rolling Clockwise with Dynamic Logo in Center) */}
-          <div className="relative z-10 my-6 flex items-center justify-center">
-            <div className="relative h-72 w-72 sm:h-80 sm:w-80 flex items-center justify-center">
-              
+                <div className="face face--front">
+                  <div className="visor">
+                    <div className="eyes" id="eyes">
+                      <span className="eye eye--l"></span>
+                      <span className="eye eye--r"></span>
+                    </div>
+                    <span className="cheek cheek--l"></span>
+                    <span className="cheek cheek--r"></span>
+                    <span className="mouth"></span>
+                  </div>
+                </div>
 
-              {/* CENTER LOGO: Dynamic Transparent Company Logo */}
-              <div className="relative z-20 flex items-center justify-center transition-transform duration-300 hover:scale-105">
-                <img
-                  src={logoSrc}
-                  alt={displayName}
-                  className="h-24 sm:h-32 w-auto object-contain mix-blend-multiply drop-shadow-md"
-                  onError={(e) => {
-                    e.target.src = '/logo.png';
-                  }}
-                />
+                <div className="face face--back">
+                  <div className="panel">
+                    <span className="panel-lights"><i></i><i></i><i></i></span>
+                    <div className="meter" id="meter">
+                      <i></i><i></i><i></i><i></i>
+                    </div>
+                    <p className="panel-label" id="panelLabel">NOT LOOKING</p>
+                  </div>
+                </div>
               </div>
-
             </div>
           </div>
 
-          {/* Bottom Descriptor */}
-          <div className="relative z-10 space-y-1 text-center lg:text-left">
-            <h3 className="text-lg font-black text-primary tracking-tight">
-              Enterprise CRM Workspace
-            </h3>
-            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-              Streamlining team workflows, dynamic builders, and real-time operations.
-            </p>
-          </div>
+          <form className="card" id="form" noValidate onSubmit={handleSubmit}>
+            <span className="hand hand--l" aria-hidden="true"></span>
+            <span className="hand hand--r" aria-hidden="true"></span>
 
-        </div>
-
-        {/* RIGHT COLUMN: Interactive Login Form Panel (Equal Top & Bottom Spacing) */}
-        <div className="w-full lg:w-1/2 p-8 sm:p-12 flex flex-col justify-center my-auto text-left">
-          
-          <div className="my-auto w-full">
-            {/* Title Header (Center Aligned) */}
-            <div className="mb-6 space-y-1 text-center">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-primary text-center">
-                {forgotMode ? 'Reset Password' : displayName}
-              </h2>
-              <p className="text-xs font-semibold text-muted-foreground text-center">
-                {forgotMode
-                  ? 'Enter your User ID to reset your password to your Date of Birth.'
-                  : 'Enter your enterprise credentials to access your portal.'}
-              </p>
+            <div className="flex justify-center mb-6">
+              <img src={companyLogo || '/logo.png'} alt="Clarity Logo" className="h-10 w-auto mix-blend-multiply opacity-80" onError={(e) => e.target.style.display='none'} />
             </div>
 
-            {/* Error Alert */}
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl bg-danger/10 border border-danger/20 p-3.5 text-xs text-danger font-semibold">
-                <span className="shrink-0 mt-0.5">⚠️</span>
-                <span>{error}</span>
+              <div className="error-alert">
+                {error}
               </div>
             )}
 
-            {/* Reset Success Alert */}
-            {resetSuccess && (
-              <div className="mb-4 rounded-2xl bg-success/10 border border-success/20 p-3.5 text-xs text-success font-semibold">
-                <p>{resetSuccess}</p>
-                {tempPassAlert && (
-                  <p className="mt-1.5 font-mono text-success bg-success/10 rounded-lg px-2 py-1">{tempPassAlert}</p>
-                )}
-              </div>
-            )}
+            <label className="field">
+              <svg className="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm8 7.3L4.4 7h15.2L12 12.3ZM4 9.2V17h16V9.2l-8 5.3-8-5.3Z" />
+              </svg>
+              <input id="email" ref={emailRef} type="text" placeholder="Your User ID or Email" autoComplete="username" aria-label="Your email" />
+            </label>
 
-            {/* LOGIN FORM */}
-            {!forgotMode ? (
-              <form className="space-y-4" onSubmit={handleLoginSubmit}>
-                {/* User ID */}
-                <div className="space-y-1">
-                  <div className="relative group">
-                    <User className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="Enter Mail"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-4 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
-                      autoComplete="username"
-                    />
-                  </div>
-                </div>
+            <label className="field">
+              <svg className="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3H9Zm3 4a2 2 0 0 1 1 3.7V19h-2v-1.3a2 2 0 0 1 1-3.7Z" />
+              </svg>
+              <input id="password" ref={passRef} type="password" placeholder="Super secret password" autoComplete="current-password"
+                aria-label="Password" />
+              <button className="peek" id="togglePass" type="button" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 5c-5 0-9.3 3.1-11 7.5C2.7 16.9 7 20 12 20s9.3-3.1 11-7.5C21.3 8.1 17 5 12 5Zm0 12.5a5 5 0 1 1 5-5 5 5 0 0 1-5 5Zm0-8a3 3 0 1 0 3 3 3 3 0 0 0-3-3Z" />
+                </svg>
+              </button>
+            </label>
 
-                {/* Password */}
-                <div className="space-y-1">
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter Password"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-11 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      tabIndex={-1}
-                      className="absolute right-4 top-4 text-muted-foreground hover:text-primary transition-colors focus:outline-none cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
+            <button className="btn" id="loginBtn" type="submit" disabled={loading}>
+              <span className="btn-bolt" aria-hidden="true">⚡</span>
+              <span className="btn-label" id="btnLabel">{loading ? 'LOGGING IN...' : 'LOG ME IN'}</span>
+            </button>
 
-                {/* Remember Me & Forgot Password Row */}
-                <div className="flex items-center justify-between text-xs font-semibold pt-1">
-                  <label className="flex items-center gap-2 text-muted-foreground cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="hidden"
-                    />
-                    {rememberMe ? (
-                      <CheckSquare className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Square className="h-4 w-4 text-muted-foreground/40" />
-                    )}
-                    <span>Remember me</span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => { setForgotMode(true); setError(''); }}
-                    className="text-primary hover:text-primary-hover font-bold hover:underline transition-colors cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-
-                {/* Main Submit Button (Dynamic Theme Gradient) */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground py-3.5 text-sm font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Log In to Account</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            ) : (
-              /* RESET PASSWORD FORM */
-              <form className="space-y-4" onSubmit={handleResetSubmit}>
-                <div className="space-y-1">
-                  <div className="relative group">
-                    <User className="absolute left-4 top-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="Enter User ID (e.g. EM-1004)"
-                      className="w-full rounded-2xl border border-border/80 bg-muted/20 py-3.5 pl-11 pr-4 text-sm text-foreground font-medium hover:border-primary/40 focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 placeholder:text-muted-foreground/60 transition-all outline-none [&:-webkit-autofill]:shadow-[0_0_0_1000px_rgba(248,250,252,1)_inset] [&:-webkit-autofill]:-webkit-text-fill-color:rgb(30,41,59)"
-                      value={resetUserId}
-                      onChange={(e) => setResetUserId(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground py-3.5 text-sm font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4" />
-                      <span>Reset Password</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setForgotMode(false); setError(''); setResetSuccess(''); }}
-                  className="w-full text-center text-xs text-muted-foreground hover:text-primary font-semibold transition-colors py-1 cursor-pointer"
-                >
-                  ← Back to Sign In
-                </button>
-              </form>
-            )}
-          </div>
-
-        </div>
+            <span className="foot foot--l" aria-hidden="true"></span>
+            <span className="foot foot--r" aria-hidden="true"></span>
+          </form>
+        </main>
       </div>
     </div>
   );

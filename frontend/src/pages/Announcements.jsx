@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import UserAvatar from '../components/common/UserAvatar';
 import {
   Megaphone,

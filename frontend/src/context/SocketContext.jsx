@@ -40,9 +40,14 @@ export const SocketProvider = ({ children }) => {
     fetchInitialData();
   }, [token]);
 
+  const userRef = React.useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Handle live socket connections
   useEffect(() => {
-    if (!user || !token) {
+    if (!userRef.current?.id || !token) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -52,19 +57,22 @@ export const SocketProvider = ({ children }) => {
 
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
     const newSocket = io(BACKEND_URL, {
-      transports: ['websocket'],
-      upgrade: false
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       console.log('Connected to real-time notification socket.');
-      const teamId = user.teamMembers?.[0]?.teamId || null;
+      const currentUser = userRef.current;
+      const teamId = currentUser?.teamMembers?.[0]?.teamId || null;
       newSocket.emit('register', {
-        userId: user.id,
-        name: user.name,
-        role: user.role,
+        userId: currentUser.id,
+        name: currentUser.name,
+        role: currentUser.role,
         teamId
       });
     });
@@ -95,7 +103,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [user, token]);
+  }, [user?.id, token]);
 
   const markRead = async (id) => {
     try {

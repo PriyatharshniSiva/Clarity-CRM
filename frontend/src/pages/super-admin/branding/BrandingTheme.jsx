@@ -9,24 +9,24 @@ import { useTheme } from '../../../context/ThemeContext';
 
 const THEME_PRESETS = [
   {
-    id: 'emerald',
-    name: 'Default Green',
-    description: 'Classic emerald green enterprise palette',
-    sidebarColor: 'bg-emerald-950',
-    headerColor: 'bg-emerald-600',
-    buttonColor: 'bg-emerald-600 text-white',
-    accentColor: 'bg-emerald-500',
-    cardBorder: 'border-emerald-500/40'
-  },
-  {
     id: 'blue',
-    name: 'Royal Blue',
+    name: 'Default Blue',
     description: 'Professional royal blue corporate design',
     sidebarColor: 'bg-blue-950',
     headerColor: 'bg-blue-600',
     buttonColor: 'bg-blue-600 text-white',
     accentColor: 'bg-blue-500',
     cardBorder: 'border-blue-500/40'
+  },
+  {
+    id: 'emerald',
+    name: 'Classic Green',
+    description: 'Classic emerald green enterprise palette',
+    sidebarColor: 'bg-emerald-950',
+    headerColor: 'bg-emerald-600',
+    buttonColor: 'bg-emerald-600 text-white',
+    accentColor: 'bg-emerald-500',
+    cardBorder: 'border-emerald-500/40'
   },
   {
     id: 'purple',

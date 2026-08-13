@@ -1151,7 +1151,10 @@ const Tasks = () => {
             <h3 className="text-sm font-bold text-foreground">Workspace Wiki Library</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Guides, coding standards, and onboarding tutorials.</p>
           </div>
-          <button className="text-[10px] bg-primary text-primary-foreground hover:bg-primary-hover font-bold px-3 py-1.5 rounded-lg shadow-sm">
+          <button 
+            onClick={() => setAlertMsg('Wiki module is currently in development! Coming soon.')}
+            className="text-[10px] bg-primary text-primary-foreground hover:bg-primary-hover font-bold px-3 py-1.5 rounded-lg shadow-sm"
+          >
             + Create Page
           </button>
         </div>
@@ -1236,9 +1239,9 @@ const Tasks = () => {
   return (
     <div className="flex-1 flex flex-col space-y-4 text-left">
       {alertMsg && (
-        <div className="flex items-center justify-between p-3 rounded-xl border border-primary/20 bg-primary/5 text-primary text-xs font-semibold">
+        <div className="fixed bottom-6 right-6 z-[100] max-w-sm flex items-center justify-between gap-4 p-4 rounded-xl border border-primary/20 bg-card shadow-2xl text-primary text-xs font-semibold animate-in slide-in-from-bottom-5 fade-in duration-300">
           <span>{alertMsg}</span>
-          <button onClick={() => setAlertMsg('')}><X className="h-4 w-4" /></button>
+          <button onClick={() => setAlertMsg('')} className="p-1 hover:bg-primary/10 rounded-md transition-colors"><X className="h-4 w-4" /></button>
         </div>
       )}
 

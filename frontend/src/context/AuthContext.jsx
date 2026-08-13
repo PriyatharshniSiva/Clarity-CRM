@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setIsTempPassword(isTempPassword);
       setLoading(false);
-      return { success: true, isTempPassword };
+      return { success: true, isTempPassword, role: userData.role };
     } catch (error) {
       setLoading(false);
       const msg = error.response?.data?.message || 'Login failed. Please check your credentials.';
@@ -96,6 +96,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      await api.delete('/auth/profile');
+      logout();
+      return { success: true, message: 'Account deleted successfully.' };
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to delete account.';
+      return { success: false, message: msg };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -105,7 +116,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
-    requestPasswordReset
+    requestPasswordReset,
+    deleteAccount
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
