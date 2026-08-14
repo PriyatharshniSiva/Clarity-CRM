@@ -277,6 +277,36 @@ export const InternDashboard = () => {
     }
   };
 
+  const handleStartBreak = async () => {
+    try {
+      setClockLoading(true);
+      setAttendanceAlert('');
+      await api.post('/attendance/break/start', { type: 'BREAK' });
+      setAttendanceAlert('Break started successfully.');
+      await fetchEmployeeDashboardData();
+    } catch (err) {
+      setAttendanceAlert(err.response?.data?.message || 'Start break failed.');
+    } finally {
+      setClockLoading(false);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    try {
+      setClockLoading(true);
+      setAttendanceAlert('');
+      await api.put('/attendance/break/end');
+      setAttendanceAlert('Break ended successfully.');
+      await fetchEmployeeDashboardData();
+    } catch (err) {
+      setAttendanceAlert(err.response?.data?.message || 'End break failed.');
+    } finally {
+      setClockLoading(false);
+    }
+  };
+
+  const activeBreak = clockedRecord?.breaks?.find(b => !b.endTime);
+
   // Real Database Leave Balances State
   const [leaveBalances, setLeaveBalances] = useState({
     casualRemaining: 12,
@@ -579,6 +609,30 @@ export const InternDashboard = () => {
                 <span>Clock Out</span>
               </button>
             </div>
+            
+            {clockedRecord && !clockedRecord.clockOut && (
+              <div className="flex items-center justify-center gap-2 pt-2 mt-2 border-t border-gray-100 dark:border-border/40 w-full">
+                {!activeBreak ? (
+                  <button
+                    onClick={handleStartBreak}
+                    disabled={clockLoading}
+                    className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Square className="h-3 w-3 fill-current" />
+                    <span>Start Break</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleEndBreak}
+                    disabled={clockLoading}
+                    className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Play className="h-3 w-3 fill-current" />
+                    <span>End Break</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -750,9 +804,12 @@ export const InternDashboard = () => {
               </div>
 
               <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/40">
-                <span className="text-[10px] font-extrabold uppercase text-muted-foreground">Break & Overtime</span>
+                <span className="text-[10px] font-extrabold uppercase text-muted-foreground">Breaks Taken</span>
                 <span className="text-lg font-black text-foreground block mt-1">
-                  {clockedRecord ? '45m' : '0m'} / {currentWorkingHours > 8 ? `${(currentWorkingHours - 8).toFixed(1)}h` : '0h'}
+                  {clockedRecord?.breaks ? clockedRecord.breaks.length : 0} 
+                  {clockedRecord?.breaks?.reduce((acc, b) => acc + (b.durationMins || 0), 0) > 0 
+                    ? ` (${clockedRecord.breaks.reduce((acc, b) => acc + (b.durationMins || 0), 0)}m)` 
+                    : ''}
                 </span>
               </div>
             </div>

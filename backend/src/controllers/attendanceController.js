@@ -49,7 +49,8 @@ const getClockInStatus = async (req, res) => {
 
     // Check existing attendance for today
     const existing = await prisma.attendance.findUnique({
-      where: { userId_date: { userId, date: todayDate } }
+      where: { userId_date: { userId, date: todayDate } },
+      include: { breaks: true }
     });
 
     // Check if user has an APPROVED WFH/Leave
@@ -419,11 +420,116 @@ const getAttendanceAnalytics = async (req, res) => {
   }
 };
 
+const startBreak = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+    const todayDate = getTodayZonedDate(now, timeZone);
+
+    const attendance = await prisma.attendance.findUnique({
+      where: { userId_date: { userId, date: todayDate } }
+    });
+
+    if (!attendance) {
+      return res.status(400).json({ success: false, message: 'You have not clocked in today yet.' });
+    }
+    if (attendance.clockOut) {
+      return res.status(400).json({ success: false, message: 'You have already clocked out today.' });
+    }
+
+    // Check if there is already an active break
+    const activeBreak = await prisma.break.findFirst({
+      where: { attendanceId: attendance.id, endTime: null }
+    });
+
+    if (activeBreak) {
+      return res.status(400).json({ success: false, message: 'You already have an active break.' });
+    }
+
+    const { type } = req.body; // e.g., 'LUNCH', 'TEA'
+
+    const newBreak = await prisma.break.create({
+      data: {
+        attendanceId: attendance.id,
+        startTime: now,
+        type: type || 'BREAK'
+      }
+    });
+
+    await logActivity({
+      userId,
+      action: 'BREAK_STARTED',
+      details: `Started ${newBreak.type} break.`,
+      ipAddress: req.ip || '127.0.0.1'
+    });
+
+    res.status(201).json(newBreak);
+  } catch (error) {
+    console.error('Start break error:', error);
+    res.status(500).json({ success: false, message: 'Failed to start break.' });
+  }
+};
+
+const endBreak = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+    const timeZone = getSystemTimeZone(settings);
+    const todayDate = getTodayZonedDate(now, timeZone);
+
+    const attendance = await prisma.attendance.findUnique({
+      where: { userId_date: { userId, date: todayDate } }
+    });
+
+    if (!attendance) {
+      return res.status(400).json({ success: false, message: 'You have not clocked in today yet.' });
+    }
+
+    const activeBreak = await prisma.break.findFirst({
+      where: { attendanceId: attendance.id, endTime: null }
+    });
+
+    if (!activeBreak) {
+      return res.status(400).json({ success: false, message: 'No active break found.' });
+    }
+
+    const diffMs = now.getTime() - new Date(activeBreak.startTime).getTime();
+    const durationMins = Math.round(diffMs / (1000 * 60));
+
+    const endedBreak = await prisma.break.update({
+      where: { id: activeBreak.id },
+      data: {
+        endTime: now,
+        durationMins
+      }
+    });
+
+    await logActivity({
+      userId,
+      action: 'BREAK_ENDED',
+      details: `Ended ${endedBreak.type} break. Duration: ${durationMins} mins.`,
+      ipAddress: req.ip || '127.0.0.1'
+    });
+
+    res.json(endedBreak);
+  } catch (error) {
+    console.error('End break error:', error);
+    res.status(500).json({ success: false, message: 'Failed to end break.' });
+  }
+};
+
 module.exports = {
   getClockInStatus,
   clockIn,
   clockOut,
   getAttendanceLogs,
   updateAttendance,
-  getAttendanceAnalytics
+  getAttendanceAnalytics,
+  startBreak,
+  endBreak
 };

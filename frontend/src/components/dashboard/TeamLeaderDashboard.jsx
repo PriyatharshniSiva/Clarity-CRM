@@ -309,6 +309,36 @@ export const TeamLeaderDashboard = () => {
     }
   };
 
+  const handleStartBreak = async () => {
+    try {
+      setClockLoading(true);
+      setAttendanceAlert('');
+      await api.post('/attendance/break/start', { type: 'BREAK' });
+      setAttendanceAlert('Break started successfully.');
+      await fetchTLDashboardData();
+    } catch (err) {
+      setAttendanceAlert(err.response?.data?.message || 'Start break failed.');
+    } finally {
+      setClockLoading(false);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    try {
+      setClockLoading(true);
+      setAttendanceAlert('');
+      await api.put('/attendance/break/end');
+      setAttendanceAlert('Break ended successfully.');
+      await fetchTLDashboardData();
+    } catch (err) {
+      setAttendanceAlert(err.response?.data?.message || 'End break failed.');
+    } finally {
+      setClockLoading(false);
+    }
+  };
+
+  const activeBreak = clockedRecord?.breaks?.find(b => !b.endTime);
+
   const handleApplyLeaveSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -654,6 +684,29 @@ export const TeamLeaderDashboard = () => {
                 <Square className="h-3.5 w-3.5 fill-current" />
                 <span>Clock Out</span>
               </button>
+              {clockedRecord && !clockedRecord.clockOut && (
+                <>
+                  {!activeBreak ? (
+                    <button
+                      onClick={handleStartBreak}
+                      disabled={clockLoading}
+                      className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      <Square className="h-3.5 w-3.5 fill-current" />
+                      <span>Start Break</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEndBreak}
+                      disabled={clockLoading}
+                      className="flex items-center justify-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                      <span>End Break</span>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

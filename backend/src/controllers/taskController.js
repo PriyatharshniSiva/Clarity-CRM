@@ -359,12 +359,21 @@ const updateTaskStatus = async (req, res) => {
       }
     }
 
+    let updateData = {
+      status,
+      approvalStatus: status === 'APPROVED' ? 'APPROVED' : status === 'REJECTED' ? 'REJECTED' : task.approvalStatus
+    };
+
+    if (status === 'IN_PROGRESS' && !task.startedAt) {
+      updateData.startedAt = new Date();
+    }
+    if ((status === 'COMPLETED' || status === 'APPROVED') && !task.completedAt) {
+      updateData.completedAt = new Date();
+    }
+
     const updatedTask = await prisma.task.update({
       where: { id },
-      data: {
-        status,
-        approvalStatus: status === 'APPROVED' ? 'APPROVED' : status === 'REJECTED' ? 'REJECTED' : task.approvalStatus
-      },
+      data: updateData,
       include: { assignee: true, creator: true }
     });
 

@@ -2101,6 +2101,20 @@ const Tasks = () => {
                     <p className="text-xs font-semibold">{new Date(selectedTask.deadline).toLocaleDateString()}</p>
                   </div>
 
+                  {selectedTask.startedAt && (
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-muted-foreground">Started At</h4>
+                      <p className="text-xs font-semibold text-emerald-600">{new Date(selectedTask.startedAt).toLocaleString()}</p>
+                    </div>
+                  )}
+
+                  {selectedTask.completedAt && (
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-muted-foreground">Completed At</h4>
+                      <p className="text-xs font-semibold text-emerald-600">{new Date(selectedTask.completedAt).toLocaleString()}</p>
+                    </div>
+                  )}
+
                   {selectedTask.project && (
                     <div className="space-y-1 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
                       <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Project</h4>

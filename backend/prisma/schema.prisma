@@ -158,8 +158,21 @@ model Attendance {
   shiftStartUsed  String?
 
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  breaks       Break[]
 
   @@unique([userId, date])
+}
+
+model Break {
+  id           String     @id @default(uuid())
+  attendanceId String
+  startTime    DateTime   @default(now())
+  endTime      DateTime?
+  type         String     @default("BREAK") // e.g., LUNCH, TEA, PERSONAL
+  durationMins Int?
+  createdAt    DateTime   @default(now())
+
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
 }
 
 model Task {
@@ -181,6 +194,8 @@ model Task {
   estimatedHours Float?          @default(0)
   actualHours    Float?          @default(0)
   approvalStatus String @default("NOT_REQUIRED")
+  startedAt      DateTime?
+  completedAt    DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
