@@ -113,6 +113,13 @@ const Tasks = () => {
   const [newRepoForm, setNewRepoForm] = useState({ name: '', url: '', lang: 'React/JS' });
   const [showAddRepo, setShowAddRepo] = useState(false);
   
+  // Wiki states
+  const [wikiPages, setWikiPages] = useState([]);
+  const [wikiCreateModalOpen, setWikiCreateModalOpen] = useState(false);
+  const [wikiViewModalOpen, setWikiViewModalOpen] = useState(false);
+  const [selectedWiki, setSelectedWiki] = useState(null);
+  const [wikiFormData, setWikiFormData] = useState({ title: '', content: '' });
+
   // Custom Confirmation Modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -151,6 +158,28 @@ const Tasks = () => {
       setRepositories(res.data || []);
     } catch (err) {
       console.error('Failed to load repositories:', err);
+    }
+  };
+
+  const fetchWikiPages = async () => {
+    try {
+      const res = await api.get('/wiki');
+      setWikiPages(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load wiki pages:', err);
+    }
+  };
+
+  const handleCreateWiki = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/wiki', wikiFormData);
+      setWikiCreateModalOpen(false);
+      setWikiFormData({ title: '', content: '' });
+      fetchWikiPages();
+      setAlertMsg('Wiki page created successfully.');
+    } catch (err) {
+      setAlertMsg(err.response?.data?.message || 'Failed to create wiki page.');
     }
   };
 
@@ -267,6 +296,7 @@ const Tasks = () => {
     fetchTasks();
     fetchRepositories();
     fetchProjects();
+    fetchWikiPages();
     if (user.role === 'ADMIN' || user.role === 'TEAM_LEADER') {
       fetchTeamMembers();
       fetchTeams();
@@ -1138,12 +1168,6 @@ const Tasks = () => {
   };
 
   const renderDocsTab = () => {
-    const documents = [
-      { title: 'Clarity InfoTech Intern Onboarding Guide', desc: 'Step-by-step checklist for system configurations and access setup.', author: 'Admin', date: 'Jul 15, 2026' },
-      { title: 'Frontend Coding Style & UI Standards', desc: 'Rules for tailwind configs, custom CSS classes, and Lucide icons.', author: 'Suraj Somu', date: 'Jul 12, 2026' },
-      { title: 'API Endpoints & Database Schemas Guide', desc: 'Documentation of attendance and team route endpoints parameters.', author: 'Suraj Somu', date: 'Jul 10, 2026' }
-    ];
-
     return (
       <div className="bg-card border border-border/40 p-6 rounded-2xl shadow-sm text-left animate-in fade-in duration-300 space-y-6">
         <div className="flex items-center justify-between border-b border-border/30 pb-3">
@@ -1152,30 +1176,41 @@ const Tasks = () => {
             <p className="text-xs text-muted-foreground mt-0.5">Guides, coding standards, and onboarding tutorials.</p>
           </div>
           <button 
-            onClick={() => setAlertMsg('Wiki module is currently in development! Coming soon.')}
+            onClick={() => setWikiCreateModalOpen(true)}
             className="text-[10px] bg-primary text-primary-foreground hover:bg-primary-hover font-bold px-3 py-1.5 rounded-lg shadow-sm"
           >
             + Create Page
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {documents.map((doc, i) => (
-            <div key={i} className="border border-border/20 bg-muted/20 hover:border-primary/20 rounded-xl p-4 flex flex-col justify-between h-44 shadow-sm hover:shadow transition-all">
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-foreground line-clamp-2 leading-snug">{doc.title}</h4>
-                <p className="text-[10px] text-muted-foreground line-clamp-3 leading-relaxed mt-1">{doc.desc}</p>
+        {wikiPages.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-xs text-muted-foreground">No wiki pages found. Click '+ Create Page' to start.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {wikiPages.map((page) => (
+              <div 
+                key={page.id} 
+                onClick={() => { setSelectedWiki(page); setWikiViewModalOpen(true); }}
+                className="cursor-pointer border border-border/20 bg-muted/20 hover:border-primary/20 rounded-xl p-4 flex flex-col justify-between h-44 shadow-sm hover:shadow transition-all"
+              >
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-foreground line-clamp-2 leading-snug">{page.title}</h4>
+                  <p className="text-[10px] text-muted-foreground line-clamp-3 leading-relaxed mt-1 whitespace-pre-wrap">{page.content}</p>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-muted-foreground pt-2 border-t border-border/10">
+                  <span>Author: <b>{page.author?.name || 'Unknown'}</b></span>
+                  <span>{new Date(page.createdAt).toLocaleDateString()}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-[9px] text-muted-foreground pt-2 border-t border-border/10">
-                <span>Author: <b>{doc.author}</b></span>
-                <span>{doc.date}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
+
 
   const renderFormsTab = () => {
     return (
@@ -2295,6 +2330,74 @@ const Tasks = () => {
           </div>
         </div>
       )}
+
+      {/* Wiki Create Modal */}
+      {wikiCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
+              <h2 className="text-base font-bold text-foreground">Create Wiki Page</h2>
+              <button onClick={() => setWikiCreateModalOpen(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateWiki} className="p-5 flex flex-col gap-4 overflow-y-auto">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase">Page Title *</label>
+                <input 
+                  required
+                  value={wikiFormData.title}
+                  onChange={(e) => setWikiFormData({...wikiFormData, title: e.target.value})}
+                  type="text" 
+                  placeholder="e.g. Developer Setup Guide"
+                  className="w-full text-xs border border-border/40 bg-background px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase">Content *</label>
+                <textarea 
+                  required
+                  value={wikiFormData.content}
+                  onChange={(e) => setWikiFormData({...wikiFormData, content: e.target.value})}
+                  rows={10}
+                  placeholder="Write the content of the wiki here..."
+                  className="w-full text-xs border border-border/40 bg-background px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                ></textarea>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setWikiCreateModalOpen(false)} className="px-4 py-2 text-xs font-semibold rounded-xl border border-border/40 hover:bg-muted transition-colors">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary text-white shadow-md hover:bg-primary-hover active:scale-95 transition-all">Create Page</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Wiki View Modal */}
+      {wikiViewModalOpen && selectedWiki && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 bg-muted/10">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">{selectedWiki.title}</h2>
+                <div className="flex gap-4 mt-1 text-[10px] text-muted-foreground">
+                  <span>Author: <b>{selectedWiki.author?.name || 'Unknown'}</b></span>
+                  <span>Created: {new Date(selectedWiki.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <button onClick={() => setWikiViewModalOpen(false)} className="p-1.5 rounded-full hover:bg-muted text-muted-foreground">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto bg-background/50">
+              <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                {selectedWiki.content}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

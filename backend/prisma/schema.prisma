@@ -106,6 +106,7 @@ model User {
   performedRevisions       SalaryRevision[]  @relation("RevisedByRevisions")
   payslips                 Payslip[]         @relation("UserPayslips")
   processedBatches         PayrollBatch[]    @relation("ProcessedBatches")
+  wikiPages                WikiPage[]
 }
 
 model Team {
@@ -123,6 +124,7 @@ model Team {
   announcements Announcement[]
   chatRooms     ChatRoom[]
   projects      Project[]
+  wikiPages     WikiPage[]
 }
 
 model TeamMember {
@@ -360,7 +362,7 @@ model ActivityLog {
 
 model SystemSettings {
   id               String   @id @default("GLOBAL")
-  companyName      String   @default("Innoveity")
+  companyName      String   @default("Clarity")
   senderEmail      String   @default("no-reply@innoveity.com")
   internShiftStart String   @default("09:30") // Format HH:MM
   internShiftEnd   String   @default("18:30")
@@ -369,7 +371,7 @@ model SystemSettings {
   officeLatitude   Float    @default(12.971598)
   officeLongitude  Float    @default(77.594562)
   allowedRadiusMeters Float  @default(200.0)
-  officeLocationName  String @default("Innoveity Headquarters")
+  officeLocationName  String @default("Clarity Headquarters")
   earlyWindowMinutes Int    @default(30)
   gracePeriodMinutes Int    @default(15)
   updatedAt        DateTime @updatedAt
@@ -880,7 +882,7 @@ model PayrollSettings {
   minimumWorkingHours   Float    @default(4.0)
   roundingRule          String   @default("ROUND_HALF_UP")
   payslipTemplate       String   @default("STANDARD")
-  companyName           String   @default("Innoveity")
+  companyName           String   @default("Clarity")
   companyLogo           String?
   companyAddress        String   @default("100 Innovation Towers, Cyber City, Bangalore - 560001")
   authorizedSignature   String   @default("Authorized HR Signatory")
@@ -946,4 +948,16 @@ model Payslip {
   @@unique([batchId, userId])
 }
 
+model WikiPage {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  authorId  String
+  teamId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
 

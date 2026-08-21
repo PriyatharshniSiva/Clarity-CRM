@@ -42,7 +42,12 @@ import {
   FileCode,
   ListTree,
   Sparkles,
-  Zap
+  Zap,
+  UserCheck,
+  ClipboardCheck,
+  GraduationCap,
+  Contact,
+  UserCog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -166,8 +171,8 @@ const DashboardLayout = ({ children }) => {
     {
       title: 'Overview',
       items: [
-        { label: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'INTERN'] },
-        { label: 'My Profile', path: '/profile', icon: UserIcon, roles: ['ADMIN', 'EMPLOYEE', 'INTERN'] }
+        { label: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'INTERN', 'TEAM_LEADER'] },
+        { label: 'My Profile', path: '/profile', icon: UserIcon, roles: ['ADMIN', 'EMPLOYEE', 'INTERN', 'TEAM_LEADER'] }
       ]
     },
     {
@@ -191,9 +196,9 @@ const DashboardLayout = ({ children }) => {
     {
       title: 'Operations',
       items: [
-        { label: 'My Work Logs', path: '/worklogs', icon: Clock, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'Attendance Portal', path: '/attendance', icon: Clock, roles: ['EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
-        { label: 'Attendance Audit', path: '/attendance-audit', icon: Clock, roles: ['TEAM_LEADER', 'ADMIN'] },
+        { label: 'My Work Logs', path: '/worklogs', icon: History, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
+        { label: 'Attendance Portal', path: '/attendance', icon: UserCheck, roles: ['EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
+        { label: 'Attendance Audit', path: '/attendance-audit', icon: ClipboardCheck, roles: ['TEAM_LEADER', 'ADMIN'] },
         { label: 'Leave Management', path: '/leave-management', icon: Calendar, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN', 'SUPER_ADMIN'] },
         { label: 'Ticket Desk', path: '/tickets', icon: Ticket, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Asset Management', path: '/assets', icon: Laptop, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] }
@@ -216,9 +221,9 @@ const DashboardLayout = ({ children }) => {
     {
       title: 'System Control',
       items: [
-        { label: 'Intern Registry', path: '/interns', icon: Users, roles: ['ADMIN'] },
-        { label: 'Employee Registry', path: '/employees', icon: Users, roles: ['ADMIN'] },
-        { label: 'Team Leader Registry', path: '/team-leaders', icon: Users, roles: ['ADMIN'] },
+        { label: 'Intern Registry', path: '/interns', icon: GraduationCap, roles: ['ADMIN'] },
+        { label: 'Employee Registry', path: '/employees', icon: Contact, roles: ['ADMIN'] },
+        { label: 'Team Leader Registry', path: '/team-leaders', icon: UserCog, roles: ['ADMIN'] },
         { label: 'Team Hub', path: '/teams', icon: Briefcase, roles: ['ADMIN', 'EMPLOYEE', 'TEAM_LEADER', 'INTERN'] },
         { label: 'Report Center', path: '/reports', icon: BarChart3, roles: ['TEAM_LEADER', 'ADMIN'] },
         { label: 'Audit Logs', path: '/audit-logs', icon: History, roles: ['ADMIN'] },

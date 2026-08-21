@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
-  Play, Lock, Eye, CheckCircle2, RotateCcw, Layers, Clock
+  Play, Lock, Eye, CheckCircle2, RotateCcw, Layers, Clock, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,6 +11,13 @@ export default function PayrollProcessingPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentBatch, setCurrentBatch] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null });
+
+  const showToast = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     fetchBatchDetails();
@@ -21,7 +28,7 @@ export default function PayrollProcessingPage() {
       setLoading(true);
       const res = await api.get(`/payroll/batches?month=${selectedMonth}&year=${selectedYear}`);
       if (res.data && res.data.length > 0) {
-        const fullRes = await api.get(`/payroll/batches/${res.data[0].id}`);
+        const fullRes = await api.get(`/payroll/batch/${res.data[0].id}`);
         setCurrentBatch(fullRes.data);
       } else {
         setCurrentBatch(null);
@@ -37,14 +44,14 @@ export default function PayrollProcessingPage() {
   const handleProcess = async () => {
     try {
       setLoading(true);
-      const res = await api.post('/payroll/batches/process', {
+      const res = await api.post('/payroll/process', {
         month: selectedMonth,
         year: selectedYear
       });
-      setCurrentBatch(res.data.batch);
-      alert('Automated payroll batch calculated and drafted successfully!');
+      setCurrentBatch(res.data);
+      showToast('Automated payroll batch calculated and drafted successfully!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to process payroll batch.');
+      showToast(err.response?.data?.message || 'Failed to process payroll batch.', 'error');
     } finally {
       setLoading(false);
     }
@@ -54,10 +61,10 @@ export default function PayrollProcessingPage() {
     if (!currentBatch) return;
     try {
       setLoading(true);
-      const res = await api.put(`/payroll/batches/${currentBatch.id}/status`, { status: 'LOCKED' });
+      const res = await api.put(`/payroll/batch/${currentBatch.id}/lock`);
       setCurrentBatch(res.data);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to lock batch.');
+      showToast(err.response?.data?.message || 'Failed to lock batch.', 'error');
     } finally {
       setLoading(false);
     }
@@ -67,10 +74,10 @@ export default function PayrollProcessingPage() {
     if (!currentBatch) return;
     try {
       setLoading(true);
-      const res = await api.put(`/payroll/batches/${currentBatch.id}/status`, { status: 'REVIEW' });
+      const res = await api.put(`/payroll/batch/${currentBatch.id}/review`);
       setCurrentBatch(res.data);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to move batch to review.');
+      showToast(err.response?.data?.message || 'Failed to move batch to review.', 'error');
     } finally {
       setLoading(false);
     }
@@ -78,32 +85,46 @@ export default function PayrollProcessingPage() {
 
   const handlePublish = async () => {
     if (!currentBatch) return;
-    if (!window.confirm('Are you sure you want to publish payslips? This will generate official employee payslips.')) return;
-    try {
-      setLoading(true);
-      await api.post(`/payroll/batches/${currentBatch.id}/publish`);
-      fetchBatchDetails();
-      alert('Payroll batch published successfully! All employee payslips are now available.');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to publish payslips.');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Publish Payslips',
+      message: 'Are you sure you want to publish payslips? This will generate official employee payslips.',
+      action: async () => {
+        try {
+          setLoading(true);
+          await api.put(`/payroll/batch/${currentBatch.id}/publish`);
+          fetchBatchDetails();
+          showToast('Payroll batch published successfully! All employee payslips are now available.');
+        } catch (err) {
+          showToast(err.response?.data?.message || 'Failed to publish payslips.', 'error');
+        } finally {
+          setLoading(false);
+          setConfirmModal({ isOpen: false, title: '', message: '', action: null });
+        }
+      }
+    });
   };
 
   const handleRollback = async () => {
     if (!currentBatch) return;
-    if (!window.confirm('WARNING: Rolling back will delete this draft/locked batch. Continue?')) return;
-    try {
-      setLoading(true);
-      await api.post(`/payroll/batches/${currentBatch.id}/rollback`);
-      setCurrentBatch(null);
-      alert('Batch rolled back.');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to rollback batch.');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Rollback Batch',
+      message: 'WARNING: Rolling back will delete this draft/locked batch. Continue?',
+      action: async () => {
+        try {
+          setLoading(true);
+          await api.put(`/payroll/batch/${currentBatch.id}/rollback`);
+          setCurrentBatch(null);
+          showToast('Batch rolled back.');
+        } catch (err) {
+          showToast(err.response?.data?.message || 'Failed to rollback batch.', 'error');
+        } finally {
+          setLoading(false);
+          setConfirmModal({ isOpen: false, title: '', message: '', action: null });
+        }
+      }
+    });
   };
 
   const formatINR = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
@@ -118,6 +139,19 @@ export default function PayrollProcessingPage() {
 
   return (
     <div className="space-y-6 text-left font-sans w-full max-w-7xl mx-auto">
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          className={`fixed bottom-6 right-6 z-[9999] p-4 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 ${notification.type === 'error'
+              ? 'bg-rose-50 border-rose-500/30 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+              : 'bg-emerald-50 border-emerald-500/30 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
+            }`}
+        >
+          {notification.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+          <span>{notification.message}</span>
+        </div>
+      )}
+
       <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
@@ -278,7 +312,7 @@ export default function PayrollProcessingPage() {
                       <p className="text-[11px] text-muted-foreground">{ps.user?.role} • {ps.user?.email}</p>
                     </td>
                     <td className="p-3.5 font-semibold">{formatINR(ps.basicSalary)}</td>
-                    <td className="p-3.5 text-muted-foreground">{formatINR(ps.hra + (ps.allowancesJson?.specialAllowance || 0))}</td>
+                    <td className="p-3.5 text-muted-foreground">{formatINR(ps.hra + (JSON.parse(ps.allowancesString || '{}')?.specialAllowance || 0))}</td>
                     <td className="p-3.5 text-foreground">
                       <span className="font-semibold">{ps.presentDays}d present</span> / <span className="text-muted-foreground">{ps.paidLeaveDays}d leave</span>
                     </td>
@@ -303,6 +337,24 @@ export default function PayrollProcessingPage() {
           <Clock className="w-8 h-8 mx-auto opacity-50 text-primary" />
           <p className="font-bold text-foreground">No Payroll Batch Processed for Month {selectedMonth} / {selectedYear}</p>
           <p className="text-xs">Click "Calculate & Draft Batch" above to run automated calculations.</p>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border shadow-xl rounded-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
+            <h3 className="font-bold text-lg">{confirmModal.title}</h3>
+            <p className="text-sm text-muted-foreground mt-2">{confirmModal.message}</p>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button onClick={() => setConfirmModal({ isOpen: false, title: '', message: '', action: null })} className="px-4 py-2 text-xs font-bold rounded-xl border border-border/50 hover:bg-muted text-muted-foreground transition-all">
+                Cancel
+              </button>
+              <button onClick={confirmModal.action} className="px-4 py-2 text-xs font-bold rounded-xl btn-primary shadow-md">
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

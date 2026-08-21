@@ -299,7 +299,9 @@ const WorkLogs = () => {
                     className="w-full px-3 py-2 rounded-xl bg-background border border-border/60 text-xs"
                   >
                     <option value="">-- No Specific Task --</option>
-                    {tasksList.map(t => (
+                    {tasksList
+                      .filter(t => !formData.projectId || t.projectId === formData.projectId)
+                      .map(t => (
                       <option key={t.id} value={t.id}>{t.title} ({t.status})</option>
                     ))}
                   </select>

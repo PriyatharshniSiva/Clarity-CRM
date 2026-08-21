@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ShieldAlert, User, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { ShieldAlert, User, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const AdminLogin = () => {
   const { user, login, logout } = useAuth();
@@ -13,6 +13,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) {
@@ -94,27 +95,23 @@ const AdminLogin = () => {
 
           <div className="relative">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               className="w-full bg-white/10 border border-white/20 text-white placeholder-white/70 rounded-full py-3 pl-6 pr-12 outline-none focus:bg-white/20 focus:border-white/40 transition-all shadow-inner text-sm"
               required
             />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-white/80">
-              <Lock className="h-4 w-4" />
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors focus:outline-none"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-white/80 px-2 pt-1 font-medium">
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-              <input type="checkbox" className="w-3 h-3 rounded-sm border-white/30 bg-white/10 text-white focus:ring-0 cursor-pointer accent-white" />
-              <span>Remember me</span>
-            </label>
-            <a href="#" className="hover:text-white hover:underline transition-colors">
-              Forgot password?
-            </a>
-          </div>
+
 
           <button
             type="submit"
@@ -123,11 +120,6 @@ const AdminLogin = () => {
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Login"}
           </button>
-
-          <div className="text-center text-[11px] text-white/70 mt-6">
-            Don't have an account? <a href="#" className="text-white font-bold hover:underline ml-1">Register</a>
-          </div>
-
         </form>
       </div>
     </div>

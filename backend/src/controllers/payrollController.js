@@ -119,14 +119,14 @@ const calculateUserPayroll = async (user, month, year, settings) => {
     basicSalary: structure.basicSalary,
     hra: structure.hra,
     da: structure.da,
-    allowancesJson: {
+    allowancesString: JSON.stringify({
       specialAllowance: structure.specialAllowance,
       travelAllowance: structure.travelAllowance,
       medicalAllowance: structure.medicalAllowance,
       otherAllowances: structure.otherAllowances,
       bonus: structure.bonus
-    },
-    deductionsJson: {
+    }),
+    deductionsString: JSON.stringify({
       pfDeduction: structure.pfDeduction,
       esiDeduction: structure.esiDeduction,
       profTax: structure.profTax,
@@ -134,7 +134,7 @@ const calculateUserPayroll = async (user, month, year, settings) => {
       otherDeductions: structure.otherDeductions,
       leaveDeduction,
       lateDeduction
-    },
+    }),
     grossSalary: totalEarnings,
     netSalary: finalNetSalary,
     workingDays,
@@ -254,7 +254,7 @@ const processPayrollBatch = async (req, res) => {
     res.json(fullBatch);
   } catch (error) {
     console.error('Process payroll batch error:', error);
-    res.status(500).json({ message: 'Failed to process payroll batch.' });
+    res.status(500).json({ message: `Failed to process payroll batch: ${error.message}` });
   }
 };
 
