@@ -432,10 +432,10 @@ const DashboardLayout = ({ children }) => {
                   <img
                     src={companyLogo.startsWith('blob:') ? companyLogo : `${api.defaults.baseURL.replace('/api', '')}${companyLogo}`}
                     alt={companyName || 'Logo'}
-                    className="h-9 max-w-[170px] object-contain shrink-0"
+                    className="h-16 max-w-[300px] object-contain shrink-0"
                   />
                 ) : (
-                  <img src="/logo.png" alt={companyName || 'CLARITY INFOTECH'} className="h-9 max-w-[170px] object-contain shrink-0" />
+                  <img src="/logo.png" alt={companyName || 'CLARITY INFOTECH'} className="h-16 max-w-[300px] object-contain shrink-0" />
                 )}
               </Link>
 

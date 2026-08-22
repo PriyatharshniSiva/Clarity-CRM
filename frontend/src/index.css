@@ -13,8 +13,8 @@
     --popover: 255, 255, 255;
     --border: 226, 234, 230;
     
-    --primary: 56, 189, 248;
-    --primary-hover: 37, 99, 235;
+    --primary: 0, 50, 99;
+    --primary-hover: 0, 35, 75;
     --primary-foreground: 255, 255, 255;
     
     --secondary: 16, 185, 129;
@@ -38,9 +38,9 @@
     --popover: 20, 29, 25;
     --border: 35, 48, 42;
     
-    --primary: 56, 189, 248;
-    --primary-hover: 37, 99, 235;
-    --primary-foreground: 13, 19, 16;
+    --primary: 0, 50, 99;
+    --primary-hover: 0, 35, 75;
+    --primary-foreground: 255, 255, 255;
     
     --secondary: 20, 184, 166;
     --accent: 52, 211, 153;
@@ -56,39 +56,39 @@
   /* Predefined Theme Presets with High Specificity */
   html[data-theme="emerald"],
   :root[data-theme="emerald"] {
-    --primary: 37, 99, 235 !important;
-    --primary-hover: 29, 78, 216 !important;
-    --primary-light: 239, 246, 255 !important;
-    --primary-dark: 10, 14, 57 !important;
-    --secondary: 56, 189, 248 !important;
-    --accent: 14, 165, 233 !important;
+    --primary: 0, 50, 99 !important;
+    --primary-hover: 0, 35, 75 !important;
+    --primary-light: 235, 245, 255 !important;
+    --primary-dark: 0, 20, 45 !important;
+    --secondary: 0, 65, 120 !important;
+    --accent: 10, 80, 150 !important;
     --app-background-from: 248, 250, 252 !important;
     --app-background-via: 241, 245, 249 !important;
     --app-background-to: 248, 250, 252 !important;
-    --button-gradient-start: 37, 99, 235 !important;
-    --button-gradient-end: 29, 78, 216 !important;
-    --button-gradient-hover-start: 29, 78, 216 !important;
-    --button-gradient-hover-end: 30, 64, 175 !important;
-    --login-start: 10, 14, 57 !important;
-    --login-end: 15, 23, 42 !important;
+    --button-gradient-start: 0, 65, 120 !important;
+    --button-gradient-end: 0, 50, 99 !important;
+    --button-gradient-hover-start: 0, 50, 99 !important;
+    --button-gradient-hover-end: 0, 35, 75 !important;
+    --login-start: 0, 50, 99 !important;
+    --login-end: 0, 20, 45 !important;
   }
   html[data-theme="blue"],
   :root[data-theme="blue"] {
-    --primary: 37, 99, 235 !important;
-    --primary-hover: 29, 78, 216 !important;
-    --primary-light: 239, 246, 255 !important;
-    --primary-dark: 30, 58, 138 !important;
-    --secondary: 59, 130, 246 !important;
-    --accent: 96, 165, 250 !important;
+    --primary: 0, 50, 99 !important;
+    --primary-hover: 0, 35, 75 !important;
+    --primary-light: 235, 245, 255 !important;
+    --primary-dark: 0, 20, 45 !important;
+    --secondary: 0, 65, 120 !important;
+    --accent: 10, 80, 150 !important;
     --app-background-from: 239, 246, 255 !important;
     --app-background-via: 243, 248, 255 !important;
     --app-background-to: 224, 231, 255 !important;
-    --button-gradient-start: 29, 78, 216 !important;
-    --button-gradient-end: 59, 130, 246 !important;
-    --button-gradient-hover-start: 30, 64, 175 !important;
-    --button-gradient-hover-end: 37, 99, 235 !important;
-    --login-start: 30, 58, 138 !important;
-    --login-end: 15, 23, 42 !important;
+    --button-gradient-start: 0, 65, 120 !important;
+    --button-gradient-end: 0, 50, 99 !important;
+    --button-gradient-hover-start: 0, 50, 99 !important;
+    --button-gradient-hover-end: 0, 35, 75 !important;
+    --login-start: 0, 50, 99 !important;
+    --login-end: 0, 20, 45 !important;
   }
   html[data-theme="purple"],
   :root[data-theme="purple"] {

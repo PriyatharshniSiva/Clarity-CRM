@@ -75,7 +75,10 @@ const createProject = async (req, res) => {
       status,
       teamId,
       leaderId,
-      memberIds
+      memberIds,
+      contractorName,
+      clientName,
+      scopes
     } = req.body;
 
     if (!name || !estimatedStartDate || !estimatedEndDate) {
@@ -116,6 +119,16 @@ const createProject = async (req, res) => {
         teamId: teamId || null,
         leaderId: leaderId || null,
         creatorId: req.user.id,
+        contractorName: contractorName || null,
+        clientName: clientName || null,
+        scopes: scopes && scopes.length > 0 ? {
+          create: scopes.map(s => ({
+            scope: s.scope || '',
+            discipline: s.discipline || '',
+            qty: Number(s.qty) || 0,
+            manHours: Number(s.manHours) || 0
+          }))
+        } : undefined,
         members: {
           create: finalMemberIds.map(userId => ({ userId }))
         }
@@ -222,7 +235,8 @@ const getProjects = async (req, res) => {
           }
         },
         chatRoom: { select: { id: true, status: true, isArchived: true } },
-        tasks: { select: { id: true, status: true } }
+        tasks: { select: { id: true, status: true } },
+        scopes: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -305,6 +319,7 @@ const getProjectById = async (req, res) => {
           },
           orderBy: { createdAt: 'desc' }
         },
+        scopes: true,
         milestones: {
           include: {
             tasks: { select: { id: true, title: true, status: true } }
@@ -358,7 +373,10 @@ const updateProject = async (req, res) => {
       status,
       teamId,
       leaderId,
-      memberIds
+      memberIds,
+      contractorName,
+      clientName,
+      scopes
     } = req.body;
 
     const existingProject = await prisma.project.findUnique({
@@ -422,15 +440,34 @@ const updateProject = async (req, res) => {
         actualStartDate,
         actualEndDate,
         teamId: teamId !== undefined ? (teamId || null) : existingProject.teamId,
-        leaderId: leaderId !== undefined ? (leaderId || null) : existingProject.leaderId
+        leaderId: leaderId !== undefined ? (leaderId || null) : existingProject.leaderId,
+        contractorName: contractorName !== undefined ? contractorName : existingProject.contractorName,
+        clientName: clientName !== undefined ? clientName : existingProject.clientName,
       },
       include: {
         leader: { select: { id: true, name: true, email: true, role: true } },
         members: {
           include: { user: { select: { id: true, name: true, email: true, role: true } } }
-        }
+        },
+        scopes: true
       }
     });
+
+    if (scopes !== undefined && Array.isArray(scopes)) {
+      await prisma.projectScope.deleteMany({ where: { projectId: id } });
+      if (scopes.length > 0) {
+        await prisma.projectScope.createMany({
+          data: scopes.map(s => ({
+            projectId: id,
+            scope: s.scope || '',
+            discipline: s.discipline || '',
+            qty: Number(s.qty) || 0,
+            manHours: Number(s.manHours) || 0
+          }))
+        });
+      }
+      updatedProject.scopes = await prisma.projectScope.findMany({ where: { projectId: id } });
+    }
 
     // Handle Member Updates
     if (Array.isArray(memberIds)) {

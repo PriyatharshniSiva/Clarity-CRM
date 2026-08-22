@@ -94,11 +94,13 @@ const Projects = () => {
     type: 'CLIENT',
     priority: 'MEDIUM',
     status: 'DRAFT',
-    estimatedStartDate: '',
     estimatedEndDate: '',
     teamId: '',
     leaderId: '',
-    memberIds: []
+    memberIds: [],
+    contractorName: '',
+    clientName: '',
+    scopes: []
   });
 
   const [fileUpload, setFileUpload] = useState(null);
@@ -211,11 +213,13 @@ const Projects = () => {
       type: 'CLIENT',
       priority: 'MEDIUM',
       status: 'ACTIVE',
-      estimatedStartDate: today,
       estimatedEndDate: nextMonth,
       teamId: '',
       leaderId: defaultLeaderId,
-      memberIds: defaultLeaderId ? [defaultLeaderId] : []
+      memberIds: defaultLeaderId ? [defaultLeaderId] : [],
+      contractorName: '',
+      clientName: '',
+      scopes: []
     });
     setCreateModalOpen(true);
   };
@@ -253,11 +257,13 @@ const Projects = () => {
       type: proj.type,
       priority: proj.priority,
       status: proj.status,
-      estimatedStartDate: new Date(proj.estimatedStartDate).toISOString().split('T')[0],
       estimatedEndDate: new Date(proj.estimatedEndDate).toISOString().split('T')[0],
       teamId: proj.teamId || '',
       leaderId: proj.leaderId || '',
-      memberIds: Array.from(new Set(existingMemberIds))
+      memberIds: Array.from(new Set(existingMemberIds)),
+      contractorName: proj.contractorName || '',
+      clientName: proj.clientName || '',
+      scopes: proj.scopes || []
     });
     setEditModalOpen(true);
   };
@@ -578,6 +584,28 @@ const Projects = () => {
                 />
               </div>
 
+              {/* Client & Contractor Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-foreground block mb-1.5">Client Name</label>
+                  <input
+                    type="text"
+                    value={formData.clientName}
+                    onChange={e => setFormData({ ...formData, clientName: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-2xl bg-muted/30 border border-border/80 text-sm text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-foreground block mb-1.5">Contractor Name</label>
+                  <input
+                    type="text"
+                    value={formData.contractorName}
+                    onChange={e => setFormData({ ...formData, contractorName: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-2xl bg-muted/30 border border-border/80 text-sm text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="text-xs font-bold text-foreground block mb-1.5">Description</label>
@@ -633,6 +661,37 @@ const Projects = () => {
                     <option value="ACTIVE">Active (Creates Chat)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Scope of Work */}
+              <div>
+                <label className="text-xs font-bold text-foreground block mb-1.5 flex items-center justify-between">
+                  <span>Scope of Work</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, scopes: [...formData.scopes, {scope:'', discipline:'', qty:'', manHours:''}]})}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Add Row
+                  </button>
+                </label>
+                {formData.scopes?.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.scopes.map((s, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input type="text" placeholder="Scope" value={s.scope} onChange={e => { const newScopes=[...formData.scopes]; newScopes[idx].scope=e.target.value; setFormData({...formData, scopes: newScopes}); }} className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border/80 text-xs text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="text" placeholder="Discipline" value={s.discipline} onChange={e => { const newScopes=[...formData.scopes]; newScopes[idx].discipline=e.target.value; setFormData({...formData, scopes: newScopes}); }} className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border/80 text-xs text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="number" placeholder="Qty" value={s.qty} onChange={e => { const newScopes=[...formData.scopes]; newScopes[idx].qty=e.target.value; setFormData({...formData, scopes: newScopes}); }} className="w-24 px-3 py-2 rounded-xl bg-muted/30 border border-border/80 text-xs text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="number" placeholder="Hrs" value={s.manHours} onChange={e => { const newScopes=[...formData.scopes]; newScopes[idx].manHours=e.target.value; setFormData({...formData, scopes: newScopes}); }} className="w-24 px-3 py-2 rounded-xl bg-muted/30 border border-border/80 text-xs text-foreground placeholder:text-muted-foreground/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <button type="button" onClick={() => { const newScopes=[...formData.scopes]; newScopes.splice(idx, 1); setFormData({...formData, scopes: newScopes}); }} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic px-2 py-1">No scopes added.</div>
+                )}
               </div>
 
               {/* Timeline Dates */}
@@ -860,6 +919,49 @@ const Projects = () => {
                       {selectedProject.description || 'No description provided.'}
                     </p>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 space-y-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Client Name</span>
+                      <div className="text-sm font-bold text-foreground">
+                        {selectedProject.clientName || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 space-y-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Contractor Name</span>
+                      <div className="text-sm font-bold text-foreground">
+                        {selectedProject.contractorName || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedProject.scopes && selectedProject.scopes.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Scope of Work</h4>
+                      <div className="rounded-2xl border border-border/40 overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50 border-b border-border/40">
+                            <tr>
+                              <th className="px-4 py-2 font-bold text-muted-foreground text-xs uppercase">Scope</th>
+                              <th className="px-4 py-2 font-bold text-muted-foreground text-xs uppercase">Discipline</th>
+                              <th className="px-4 py-2 font-bold text-muted-foreground text-xs uppercase">Qty</th>
+                              <th className="px-4 py-2 font-bold text-muted-foreground text-xs uppercase">Man Hours</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedProject.scopes.map((s, idx) => (
+                              <tr key={idx} className="border-b border-border/20 last:border-0 hover:bg-muted/20 transition-all">
+                                <td className="px-4 py-2 font-semibold text-foreground">{s.scope}</td>
+                                <td className="px-4 py-2 text-muted-foreground">{s.discipline}</td>
+                                <td className="px-4 py-2 font-medium">{s.qty}</td>
+                                <td className="px-4 py-2 font-medium">{s.manHours}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 space-y-1">

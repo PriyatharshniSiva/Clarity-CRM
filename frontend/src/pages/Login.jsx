@@ -471,7 +471,7 @@ const Login = () => {
             <span className="hand hand--r" aria-hidden="true"></span>
 
             <div className="flex justify-center mb-6">
-              <img src={companyLogo || '/logo.png'} alt="Clarity Logo" className="h-10 w-auto mix-blend-multiply opacity-80" onError={(e) => e.target.style.display='none'} />
+              <img src={companyLogo || '/logo.png'} alt="Clarity Logo" className="h-28 w-auto mix-blend-multiply opacity-80" onError={(e) => e.target.style.display='none'} />
             </div>
 
             {error && (
